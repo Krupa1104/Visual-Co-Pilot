@@ -1,0 +1,28 @@
+# Dataset folders - too large for git, keep local only
+climb/
+consolidated/
+engine_off/
+level_flight/
+takeoff_roll/
+taxi/
+consolidated.zip
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+venv/
+.venv/
+env/
+
+# Model files (large, if any appear later)
+*.pth
+*.pt
+*.h5
+*.onnx
+*.pkl
+
+# Editor/system
+.vscode/
+.DS_Store
+*.log
