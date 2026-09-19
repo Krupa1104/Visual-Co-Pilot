@@ -1,1 +1,0 @@
-from .opensky_collector import OpenSkyCollector, SyntheticOpenSkyCollector
