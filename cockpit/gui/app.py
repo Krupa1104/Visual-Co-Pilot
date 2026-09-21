@@ -130,6 +130,9 @@ with gr.Blocks(css=CUSTOM_CSS, theme=gr.themes.Base(primary_hue="blue")) as demo
         with gr.Column(scale=1):
             gr.Markdown("**Analysis Result**")
             answer_output = gr.Markdown(elem_id="answer_box")
+            with gr.Row():
+                tts_checkbox = gr.Checkbox(label="🔊 Read answer aloud", value=True)
+                stop_speech_btn = gr.Button("⏹ Stop", size="sm", scale=0)
             confidence_output = gr.Slider(
                 label="Routing confidence", minimum=0, maximum=100, value=0, interactive=False)
             gr.Markdown("**Key Detections**")
@@ -146,6 +149,45 @@ with gr.Blocks(css=CUSTOM_CSS, theme=gr.themes.Base(primary_hue="blue")) as demo
         fn=run_analysis,
         inputs=[image_input, question_box],
         outputs=[answer_output, detections_output, footer_output, confidence_output],
+    )
+
+    # ---------------------------------------------------------------
+    # Voice OUTPUT (Task 2): read the answer aloud using the browser's
+    # built-in SpeechSynthesis API — same approach as the reference radar
+    # system (Step 21): zero API cost, no cloud TTS service, no extra
+    # Python dependency. This runs as pure client-side JS triggered whenever
+    # answer_output's text changes, not as a Python/Gradio callback, so it
+    # works identically whether the question came from typing, the preset
+    # dropdown, or voice input transcription — same path either way.
+    #
+    # `js=` is the parameter name in current Gradio (4.x+); if this errors
+    # on an older Gradio install, rename it to `_js=` instead — the function
+    # body is unchanged.
+    answer_output.change(
+        fn=None,
+        inputs=[answer_output, tts_checkbox],
+        outputs=None,
+        js="""
+        (text, enabled) => {
+            if (!enabled || !text || !('speechSynthesis' in window)) {
+                return [];
+            }
+            // Cancel any speech still in progress from a previous answer
+            // before starting the new one, so answers don't queue up and
+            // get read back-to-back after several quick questions.
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            window.speechSynthesis.speak(utterance);
+            return [];
+        }
+        """,
+    )
+
+    stop_speech_btn.click(
+        fn=None,
+        inputs=None,
+        outputs=None,
+        js="() => { if ('speechSynthesis' in window) { window.speechSynthesis.cancel(); } return []; }",
     )
 
 if __name__ == "__main__":
