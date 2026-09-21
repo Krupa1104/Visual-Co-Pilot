@@ -1,0 +1,25 @@
+# Core (required to run radar_system.py + models/cnn_inference.py)
+torch
+torchvision
+Pillow
+numpy
+pandas          # yolo_model(...).pandas() used for detection boxes
+
+# Relevance-gate LLM (optional -- falls back to keyword matching without it)
+transformers
+
+# Only needed if you retrain / re-evaluate (models/cnn_trainer.py, evaluation/evaluator.py)
+matplotlib
+scikit-learn
+tqdm
+
+# Only needed for gui/cnn_demo.py (Colab ipywidgets demo) -- skip if running headless
+# ipywidgets
+
+# Only needed for voice/voice_query.py -- skip unless you use voice input
+# sounddevice
+# SpeechRecognition
+# scipy
+
+# Only needed if regenerating data via data_collection/opensky_collector.py
+# requests
