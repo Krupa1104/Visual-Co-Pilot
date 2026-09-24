@@ -1,221 +1,295 @@
 r"""
-integrate.py
-Primary launch dashboard for the Visual Co-Pilot project. Shows two
-selectable cards -- Cockpit and Radar -- each of which launches that
-module's own Gradio GUI as a subprocess, then opens it in your browser.
+integrated.py
+Single Gradio app for the Visual Co-Pilot project. Replaces the earlier
+Tkinter-launcher-that-spawns-a-subprocess design (fragile: guessed a fixed
+wait time before opening the browser, and could hit a connection-refused
+page if the model hadn't finished loading yet).
 
-DIRECTORY ASSUMPTIONS (see README section at the bottom of this docstring):
-  This script must sit at the repo root, next to cockpit/ and radar/,
-  e.g. on the `integrate` branch of Krupa1104/Visual-Co-Pilot:
-    Visual-Co-Pilot/
-    +-- cockpit/gui/app.py   <- cockpit's Gradio entry point (already existed)
-    +-- radar/app.py         <- radar's Gradio entry point (NEW -- see note)
-    +-- integrate.py         <- this file
+One process, one URL, one thing to wait on (Gradio's own "Running on
+local URL" message) -- same as running cockpit/gui/app.py or radar/app.py
+directly today.
 
-NOTE ON radar/app.py:
-  As of the `integrate` branch's original contents, radar/ had no
-  standalone GUI script -- only radar/gui/cnn_demo.py, which uses
-  ipywidgets and only renders inside a Jupyter/Colab kernel (no subprocess
-  or browser to launch). This script assumes radar/app.py has been added
-  as a Gradio wrapper around RadarSystem (mirroring cockpit/gui/app.py's
-  pattern) so both modules have a real, launchable GUI. If radar/app.py
-  isn't present at that path, the Radar card will fail with a clear error
-  telling you so, rather than silently doing nothing.
+FLOW:
+  1. You run this once, with startup args for whichever module(s) you plan
+     to use (see --help). Nothing is loaded yet at this point.
+  2. One browser tab opens to a landing view: two cards, Cockpit and Radar.
+  3. Clicking a card LAZY-LOADS that module's system (CopilotSystem or
+     RadarSystem) the first time only, then switches to that module's real
+     working panel -- drag-and-drop image box + question box + answer box,
+     same UI cockpit/gui/app.py already has. No folder-picker dialogs.
+  4. A "<- Back" button on each panel returns to the landing view. Systems
+     stay loaded in memory once loaded (no reload switching back and forth).
 
-EXECUTION STRATEGY:
-  Each module is launched as a SUBPROCESS with cwd set to its own script's
-  folder (cockpit/gui/ or radar/), exactly like radar_cli.py's own
-  docstring insists on ("run this FROM INSIDE ..."). This is deliberate,
-  not a shortcut: both modules do local, same-folder imports
-  (`from copilot_core import CopilotSystem`, `from radar_system import
-  RadarSystem`), and running each as its own process with its own cwd
-  avoids sys.path / module-name collisions entirely (both modules define
-  similarly-named files, e.g. cockpit alone has two separate
-  vqa_system.py files). This launcher does not import either module's
-  code directly for that reason.
+Setup:
+  pip install gradio torch torchvision pandas pillow sentence-transformers faster-whisper --break-system-packages
+  (plus radar/requirements-radar.txt's deps, e.g. YOLOv5's requirements --
+   both modules' dependencies now need to coexist in ONE Python environment,
+   since this is one process, not two separate subprocesses like before)
 
-  Each module is a Gradio app that starts a local web server -- this
-  script waits a few seconds for that server to come up, then opens your
-  default browser to it automatically. The launcher window then hides
-  itself (not process-killed -- see close_launcher_on_launch) so it's out
-  of your way, but stays alive in the background to host the subprocess.
+Run FROM THE REPO ROOT (needs both cockpit/ and radar/ next to it, e.g. on
+the `integrate` branch):
+  python integrated.py --cockpit_data_dir "C:\...\consolidated" --radar_base_dir "C:\...\radar_base"
 
-SETUP / PATH ASSUMPTIONS FOR RADAR AND COCKPIT (prompted for at runtime,
-not hardcoded -- but listed here so you know what to have ready):
-  Cockpit needs:
-    --data_dir   your local `consolidated` folder (contains model_output/,
-                 train.csv, etc.) -- NOT checked into git (~7.6GB, see
-                 radar/README.md's note on datasets; cockpit's data is
-                 excluded the same way).
-  Radar needs:
-    --base_dir   your local `radar_base` folder (contains models/, data/,
-                 logs/ -- your local copy of aviation_vqa_output from
-                 Drive). Also excluded from git via radar/.gitignore.
-    --yolo_root  a local `git clone https://github.com/ultralytics/yolov5`
-                 checkout. Defaults to <parent of base_dir>/yolov5 if left
-                 blank.
-  Neither dataset ships in the repo -- get them from your team / Drive
-  before using this launcher, or the respective card will fail with a
-  FileNotFoundError from inside CopilotSystem / RadarSystem, not from
-  this launcher itself.
+Then open the local URL Gradio prints (usually http://127.0.0.1:7860).
+
+If you only plan to use one module this run, you can omit the other
+module's required arg -- that card will just show a clear error (not a
+crash) if you click it without its data configured.
 """
 
 import os
 import sys
-import time
-import threading
-import subprocess
-import webbrowser
-import tkinter as tk
-from tkinter import filedialog, messagebox, simpledialog
+import argparse
+
+import gradio as gr
+from PIL import Image
 
 REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_GRADIO_URL = "http://127.0.0.1:7860"
-SERVER_STARTUP_WAIT_SECONDS = 6  # heuristic; model loading can take longer
-                                  # on first run (esp. cockpit's ~3GB LLM
-                                  # gate) -- if the browser opens too early
-                                  # to a blank/refused connection, just
-                                  # refresh the tab once loading finishes.
+COCKPIT_DIR = os.path.join(REPO_ROOT, "cockpit", "gui")
+RADAR_DIR = os.path.join(REPO_ROOT, "radar")
 
-MODULES = {
-    "cockpit": {
-        "cwd": os.path.join(REPO_ROOT, "cockpit", "gui"),
-        "script": "app.py",
-        "label": "Cockpit",
-        "description": "Instrument VQA: altitude, airspeed, heading, "
-                        "banking, climbing, flight phase.",
-        "required_paths": [
-            ("data_dir", "--data_dir", "Select your consolidated/ data folder", "dir"),
-        ],
-    },
-    "radar": {
-        "cwd": os.path.join(REPO_ROOT, "radar"),
-        "script": "app.py",
-        "label": "Radar",
-        "description": "Radar-display VQA: aircraft count, position, "
-                        "altitude, callsign.",
-        "required_paths": [
-            ("base_dir", "--base_dir", "Select your radar_base/ folder (models/, data/, logs/)", "dir"),
-            ("yolo_root", "--yolo_root", "Select your local yolov5/ checkout (Cancel = use default)", "dir_optional"),
-        ],
-    },
-}
+# Both modules do local, same-folder imports (`from copilot_core import
+# CopilotSystem`, `from radar_system import RadarSystem`). Since everything
+# now runs in ONE process (unlike the old subprocess-per-module launcher),
+# both folders need to be on sys.path so those local imports resolve no
+# matter which one loads first.
+for _p in (COCKPIT_DIR, RADAR_DIR):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
+parser = argparse.ArgumentParser()
+# Cockpit args -- same names/defaults as cockpit/gui/app.py's own parser.
+parser.add_argument("--cockpit_data_dir", default=None,
+                     help="Your local consolidated/ folder. Required to use the Cockpit card.")
+parser.add_argument("--cockpit_img_width", type=int, default=224)
+parser.add_argument("--cockpit_img_height", type=int, default=224)
+parser.add_argument("--cockpit_use_letterbox", action="store_true")
+parser.add_argument("--cockpit_confidence_threshold", type=float, default=0.35)
+# Radar args -- same names/defaults as radar/app.py's own parser.
+parser.add_argument("--radar_base_dir", default=None,
+                     help="Your local radar_base/ folder (models/, data/, logs/). "
+                          "Required to use the Radar card.")
+parser.add_argument("--radar_repo_root", default=None)
+parser.add_argument("--radar_yolo_root", default=None)
+parser.add_argument("--radar_yolo_conf", type=float, default=0.25)
+parser.add_argument("--radar_cnn_checkpoint", default="cnn_best_model.pth")
+parser.add_argument("--share", action="store_true", help="Create a public Gradio share link")
+args = parser.parse_args()
 
-def prompt_for_paths(module_cfg):
-    """Ask the user, via file-picker dialogs, for whatever paths this
-    module's app.py needs. Returns a list of CLI args, or None if the
-    user cancelled a required one."""
-    forwarded = []
-    for _name, flag, title, kind in module_cfg["required_paths"]:
-        path = filedialog.askdirectory(title=title, mustexist=True)
-        if not path:
-            if kind == "dir_optional":
-                continue  # falls back to that module's own --yolo_root default
-            messagebox.showwarning(
-                "Required path missing",
-                f"{title} is required to launch {module_cfg['label']}.",
-            )
-            return None
-        forwarded += [flag, path]
-    return forwarded
+# =========================================================================
+# LAZY LOADING -- nothing below actually loads a model until the matching
+# "Launch" button is clicked for the first time.
+# =========================================================================
+_cockpit_system = None
+_radar_system = None
 
 
-def wait_then_open_browser(url, delay_seconds):
-    time.sleep(delay_seconds)
-    webbrowser.open(url)
-
-
-def launch_module(module_name, root_window):
-    cfg = MODULES[module_name]
-
-    if not os.path.isdir(cfg["cwd"]):
-        messagebox.showerror(
-            "Folder not found",
-            f"Expected folder not found:\n{cfg['cwd']}\n\n"
-            f"Make sure both cockpit/ and radar/ are present next to "
-            f"integrate.py (this launcher assumes it's run from a branch "
-            f"that has both, e.g. 'integrate').",
-        )
-        return
-
-    script_path = os.path.join(cfg["cwd"], cfg["script"])
-    if not os.path.isfile(script_path):
-        messagebox.showerror(
-            "Entry point not found",
-            f"Expected script not found:\n{script_path}\n\n"
-            + ("radar/app.py needs to exist as a Gradio wrapper around "
-               "RadarSystem -- see this launcher's docstring for why it "
-               "isn't part of the original repo contents."
-               if module_name == "radar" else
-               "cockpit/gui/app.py should already exist -- check you're "
-               "on the right branch/checkout."),
-        )
-        return
-
-    forwarded_args = prompt_for_paths(cfg)
-    if forwarded_args is None:
-        return  # user cancelled a required path picker
-
-    cmd = [sys.executable, cfg["script"]] + forwarded_args
-    try:
-        subprocess.Popen(cmd, cwd=cfg["cwd"])
-    except OSError as exc:
-        messagebox.showerror("Launch failed", f"Could not start {cfg['label']}:\n{exc}")
-        return
-
-    messagebox.showinfo(
-        "Launching",
-        f"Starting {cfg['label']}...\n\n"
-        f"This runs: {' '.join(cmd)}\n(cwd={cfg['cwd']})\n\n"
-        f"Your browser will open automatically once the server is up "
-        f"(~{SERVER_STARTUP_WAIT_SECONDS}s). If it opens to a refused "
-        f"connection because model loading took longer than that, just "
-        f"refresh the tab.",
+def get_cockpit_system():
+    global _cockpit_system
+    if _cockpit_system is not None:
+        return _cockpit_system, None
+    if not args.cockpit_data_dir:
+        return None, ("Cockpit isn't configured for this run -- restart with "
+                       "--cockpit_data_dir pointing at your consolidated/ folder.")
+    from copilot_core import CopilotSystem
+    print("Loading Cockpit (CopilotSystem)...")
+    _cockpit_system = CopilotSystem(
+        data_dir=args.cockpit_data_dir,
+        img_width=args.cockpit_img_width,
+        img_height=args.cockpit_img_height,
+        use_letterbox=args.cockpit_use_letterbox,
+        confidence_threshold=args.cockpit_confidence_threshold,
     )
-    threading.Thread(
-        target=wait_then_open_browser,
-        args=(DEFAULT_GRADIO_URL, SERVER_STARTUP_WAIT_SECONDS),
-        daemon=True,
-    ).start()
-
-    # Hide (not destroy) the launcher rather than killing this process --
-    # destroying root_window would also kill the daemon thread above before
-    # it gets to open the browser, and the subprocess is independent of
-    # this process anyway (Popen, not run()), so there's no need to keep
-    # this window in the way once a module is launched.
-    root_window.withdraw()
+    print(f"Cockpit loaded (checkpoint epoch {_cockpit_system.checkpoint_epoch}).")
+    return _cockpit_system, None
 
 
-def build_gui():
-    root = tk.Tk()
-    root.title("Visual Co-Pilot -- Launcher")
-    root.geometry("520x260")
-    root.resizable(False, False)
+def get_radar_system():
+    global _radar_system
+    if _radar_system is not None:
+        return _radar_system, None
+    if not args.radar_base_dir:
+        return None, ("Radar isn't configured for this run -- restart with "
+                       "--radar_base_dir pointing at your radar_base/ folder.")
+    from radar_system import RadarSystem
+    print(f"Loading Radar (checkpoint: {args.radar_cnn_checkpoint})...")
+    try:
+        _radar_system = RadarSystem(
+            base_dir=args.radar_base_dir,
+            repo_root=args.radar_repo_root,
+            yolo_root=args.radar_yolo_root,
+            yolo_conf=args.radar_yolo_conf,
+            cnn_checkpoint=args.radar_cnn_checkpoint,
+        )
+    except FileNotFoundError as exc:
+        return None, f"Radar model files missing: {exc}"
+    print("Radar loaded.")
+    return _radar_system, None
 
-    tk.Label(root, text="Visual Co-Pilot", font=("Segoe UI", 18, "bold")).pack(pady=(20, 4))
-    tk.Label(root, text="Choose a module to launch", font=("Segoe UI", 10)).pack(pady=(0, 16))
 
-    cards_frame = tk.Frame(root)
-    cards_frame.pack(expand=True, fill="both", padx=20)
+# =========================================================================
+# COCKPIT PANEL CALLBACKS (mirrors cockpit/gui/app.py's run_analysis)
+# =========================================================================
+COCKPIT_PRESET_QUESTIONS = [
+    "What is the current altitude?",
+    "How fast are we going?",
+    "What heading are we on?",
+    "Are we banking left or right?",
+    "Are we climbing?",
+    "What phase of flight are we in?",
+]
 
-    for module_name in ("cockpit", "radar"):
-        cfg = MODULES[module_name]
-        card = tk.Frame(cards_frame, relief="groove", borderwidth=2, padx=14, pady=14)
-        card.pack(side="left", expand=True, fill="both", padx=10)
 
-        tk.Label(card, text=cfg["label"], font=("Segoe UI", 14, "bold")).pack()
-        tk.Label(
-            card, text=cfg["description"], wraplength=200, justify="center",
-            font=("Segoe UI", 9),
-        ).pack(pady=(6, 14))
-        tk.Button(
-            card, text=f"Launch {cfg['label']}", width=18,
-            command=lambda m=module_name: launch_module(m, root),
-        ).pack()
+def cockpit_run_analysis(image, question):
+    system, err = get_cockpit_system()
+    if err:
+        return err, "", "", 0.0
+    if image is None:
+        return "Please upload a cockpit panel image first.", "", "", 0.0
+    if not question or not question.strip():
+        return "Please enter or select a question.", "", "", 0.0
 
-    root.mainloop()
+    result = system.answer(image, question)
+    p = result["params"]
+    key_detections_md = (
+        f"- **Altitude:** {p['altitude']:.0f} ft\n"
+        f"- **Airspeed:** {p['airspeed']:.0f} kt\n"
+        f"- **Heading:** {p['heading']:.0f}°\n"
+        f"- **Pitch:** {p['pitch_bin']}° bin (~{p['pitch_value']:.0f}°)\n"
+        f"- **Roll:** {p['roll_bin']}° bin (~{p['roll_value']:.0f}°)\n"
+        f"- **Inferred phase:** {result['phase']} _(heuristic, not a certified classifier)_"
+    )
+    footer_md = (
+        f"**Model:** CockpitNet (ResNet18)  •  "
+        f"**Latency:** {result['timings']['total_ms']:.0f}ms  •  "
+        f"**Matched intent:** {result['intent']}"
+    )
+    return result["answer"], key_detections_md, footer_md, result["confidence"] * 100
 
+
+# =========================================================================
+# RADAR PANEL CALLBACKS (mirrors radar/app.py's answer_question)
+# =========================================================================
+RADAR_PRESET_QUESTIONS = [
+    "How many aircraft are visible on the radar?",
+    "Is there any aircraft on the left side of the radar?",
+    "Is there any aircraft on the right side of the radar?",
+    "What is the callsign of the aircraft with the highest altitude?",
+    "Which quadrant of the radar has the most aircraft?",
+]
+
+
+def radar_run_analysis(image_path, question):
+    system, err = get_radar_system()
+    if err:
+        return err, None
+    if not image_path:
+        return "Please upload a radar image first.", None
+    if not question or not question.strip():
+        return "Please enter or select a question.", None
+
+    result = system.handle_question(image_path, question)
+    return result["answer"], result.get("image")
+
+
+# =========================================================================
+# GUI -- one landing view + two panels, toggled by visibility (no
+# subprocess, no new server, no port/timing guesswork).
+# =========================================================================
+CUSTOM_CSS = """
+.gradio-container {background-color: #0b0f19 !important;}
+#title {color: #7c9cff; font-size: 1.6em; font-weight: 700; margin-bottom: 0.2em;}
+#answer_box {background-color: #131824; border: 1px solid #232b3d; border-radius: 10px; padding: 16px;}
+#detections_box {background-color: #131824; border: 1px solid #232b3d; border-radius: 10px; padding: 16px;}
+#footer_box {color: #8891a5; font-size: 0.85em; margin-top: 8px;}
+.launch-card {text-align: center;}
+"""
+
+with gr.Blocks(css=CUSTOM_CSS, theme=gr.themes.Base(primary_hue="blue")) as demo:
+    gr.Markdown("### ✈️ Visual Co-Pilot", elem_id="title")
+
+    # ---------------- Landing view ----------------
+    with gr.Column(visible=True) as landing_view:
+        gr.Markdown("Choose a module to launch.")
+        with gr.Row():
+            with gr.Column(elem_classes="launch-card"):
+                gr.Markdown("**Cockpit**\n\nAltitude, airspeed, heading, banking, climbing, flight phase.")
+                cockpit_card_btn = gr.Button("Launch Cockpit", variant="primary")
+            with gr.Column(elem_classes="launch-card"):
+                gr.Markdown("**Radar**\n\nAircraft count, position, altitude, callsign.")
+                radar_card_btn = gr.Button("Launch Radar", variant="primary")
+
+    # ---------------- Cockpit panel ----------------
+    with gr.Column(visible=False) as cockpit_view:
+        cockpit_back_btn = gr.Button("← Back")
+        with gr.Row():
+            with gr.Column(scale=1):
+                cockpit_image_input = gr.Image(type="pil", label="Upload cockpit panel image",
+                                                sources=["upload", "clipboard"])
+                cockpit_preset_dropdown = gr.Dropdown(
+                    choices=COCKPIT_PRESET_QUESTIONS, label="Sample questions", value=None)
+                cockpit_question_box = gr.Textbox(
+                    label="Question", placeholder="Ask a question about the cockpit instruments...",
+                    lines=2)
+                cockpit_run_btn = gr.Button("Run Analysis", variant="primary")
+            with gr.Column(scale=1):
+                gr.Markdown("**Analysis Result**")
+                cockpit_answer_output = gr.Markdown(elem_id="answer_box")
+                cockpit_confidence_output = gr.Slider(
+                    label="Routing confidence", minimum=0, maximum=100, value=0, interactive=False)
+                gr.Markdown("**Key Detections**")
+                cockpit_detections_output = gr.Markdown(elem_id="detections_box")
+                cockpit_footer_output = gr.Markdown(elem_id="footer_box")
+
+        cockpit_preset_dropdown.change(fn=lambda q: q, inputs=cockpit_preset_dropdown,
+                                        outputs=cockpit_question_box)
+        cockpit_run_btn.click(
+            fn=cockpit_run_analysis,
+            inputs=[cockpit_image_input, cockpit_question_box],
+            outputs=[cockpit_answer_output, cockpit_detections_output,
+                     cockpit_footer_output, cockpit_confidence_output],
+        )
+
+    # ---------------- Radar panel ----------------
+    with gr.Column(visible=False) as radar_view:
+        radar_back_btn = gr.Button("← Back")
+        with gr.Row():
+            with gr.Column(scale=1):
+                radar_image_input = gr.Image(type="filepath", label="Upload radar image",
+                                              sources=["upload", "clipboard"])
+                radar_preset_dropdown = gr.Dropdown(
+                    choices=RADAR_PRESET_QUESTIONS, label="Sample questions", value=None)
+                radar_question_box = gr.Textbox(
+                    label="Question", placeholder="Ask a question about the aircraft on the radar...",
+                    lines=2)
+                radar_run_btn = gr.Button("Run Analysis", variant="primary")
+            with gr.Column(scale=1):
+                gr.Markdown("**Analysis Result**")
+                radar_answer_output = gr.Markdown(elem_id="answer_box")
+                radar_highlight_output = gr.Image(label="Highlighted result (locate/find queries only)")
+
+        radar_preset_dropdown.change(fn=lambda q: q, inputs=radar_preset_dropdown,
+                                      outputs=radar_question_box)
+        radar_run_btn.click(
+            fn=radar_run_analysis,
+            inputs=[radar_image_input, radar_question_box],
+            outputs=[radar_answer_output, radar_highlight_output],
+        )
+
+    # ---------------- View switching (landing <-> cockpit <-> radar) ----------------
+    def show_cockpit():
+        return gr.update(visible=False), gr.update(visible=True), gr.update(visible=False)
+
+    def show_radar():
+        return gr.update(visible=False), gr.update(visible=False), gr.update(visible=True)
+
+    def show_landing():
+        return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False)
+
+    cockpit_card_btn.click(fn=show_cockpit, outputs=[landing_view, cockpit_view, radar_view])
+    radar_card_btn.click(fn=show_radar, outputs=[landing_view, cockpit_view, radar_view])
+    cockpit_back_btn.click(fn=show_landing, outputs=[landing_view, cockpit_view, radar_view])
+    radar_back_btn.click(fn=show_landing, outputs=[landing_view, cockpit_view, radar_view])
 
 if __name__ == "__main__":
-    build_gui()
+    demo.launch(share=args.share)
