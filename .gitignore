@@ -1,0 +1,14 @@
+# Local datasets and models
+aviation_vqa_output-20260926T142839Z-1-001/
+aviation_vqa_output-20260926T142839Z-1-001.zip
+
+# Local YOLO repository
+radar/yolov5/
+
+# Virtual environment
+venv/
+radar/venv/
+
+# Python cache
+__pycache__/
+*.pyc
