@@ -50,7 +50,7 @@ import torch.nn.functional as F
 import torchvision.models as tv_models
 from torchvision import transforms
 from PIL import Image, ImageDraw
-
+from ultralytics import YOLO
 
 # =========================================================================
 # LEGACY CNN VQA architecture -- matches cnn_best_model.pth's ACTUAL saved
@@ -65,35 +65,50 @@ from PIL import Image, ImageDraw
 class _LegacyCNNVisualEncoder(nn.Module):
     def __init__(self, out_dim=512):
         super().__init__()
-        backbone = tv_models.resnet50(weights=tv_models.ResNet50_Weights.IMAGENET1K_V1)
+
+        backbone = tv_models.resnet50(
+            weights=tv_models.ResNet50_Weights.IMAGENET1K_V1
+        )
+
         self.features = nn.Sequential(*list(backbone.children())[:-1])
+
         self.proj = nn.Sequential(
             nn.Flatten(),
             nn.Linear(2048, out_dim),
-            nn.LayerNorm(out_dim),
+            nn.BatchNorm1d(out_dim),   # <-- CHANGED from LayerNorm
             nn.GELU(),
             nn.Dropout(0.15),
         )
 
     def forward(self, x):
-        return self.proj(self.features(x))
+        x = self.features(x)
+        return self.proj(x)
 
 
 class _LegacyQuestionEncoder(nn.Module):
-    def __init__(self, vocab=40, embed=64, hidden=256, out_dim=512):
+    def __init__(self, vocab=40, embed=128, hidden=512, out_dim=512):
         super().__init__()
         self.embed = nn.Embedding(vocab + 1, embed, padding_idx=0)
-        self.gru = nn.GRU(embed, hidden, num_layers=2, batch_first=True,
-                           dropout=0.2, bidirectional=True)
+        self.gru = nn.GRU(
+            embed,
+            hidden,
+            num_layers=3,
+            batch_first=True,
+            dropout=0.2,
+            bidirectional=True
+        )
         self.proj = nn.Sequential(
             nn.Linear(hidden * 2, out_dim),
-            nn.LayerNorm(out_dim), nn.GELU(), nn.Dropout(0.15),
+            nn.BatchNorm1d(out_dim),
+            nn.GELU(),
+            nn.Dropout(0.15),
         )
 
     def forward(self, x):
         emb = self.embed(x)
-        _, h = self.gru(emb)
-        return self.proj(torch.cat([h[-2], h[-1]], dim=-1))
+        out, h = self.gru(emb)
+        h = torch.cat([h[-2], h[-1]], dim=-1)
+        return self.proj(h)
 
 
 class _LegacyCNNVQAModel(nn.Module):
@@ -102,13 +117,21 @@ class _LegacyCNNVQAModel(nn.Module):
         self.device = device
         self.visual_enc = _LegacyCNNVisualEncoder(out_dim=feat_dim)
         self.question_enc = _LegacyQuestionEncoder(out_dim=feat_dim)
+        self.self_attn = nn.MultiheadAttention(feat_dim, num_heads=8, dropout=0.1, batch_first=True)
         self.cross_attn = nn.MultiheadAttention(feat_dim, num_heads=8,
                                                  dropout=0.1, batch_first=True)
         self.norm1 = nn.LayerNorm(feat_dim)
+        self.norm2 = nn.LayerNorm(feat_dim)
         self.classifier = nn.Sequential(
-            nn.Linear(feat_dim * 2, feat_dim), nn.GELU(), nn.Dropout(0.15),
-            nn.Linear(feat_dim, feat_dim // 2), nn.GELU(), nn.Dropout(0.15),
-            nn.Linear(feat_dim // 2, num_classes),
+            nn.Linear(feat_dim * 2, 512),
+            nn.BatchNorm1d(512),
+            nn.GELU(),
+            nn.Dropout(0.2),
+            nn.Linear(512, 256),
+            nn.BatchNorm1d(256),
+            nn.GELU(),
+            nn.Dropout(0.2),
+            nn.Linear(256, num_classes),
         )
         self.to(device)
 
@@ -120,7 +143,9 @@ class _LegacyCNNVQAModel(nn.Module):
         v_s = v.unsqueeze(1)
         q_s = q.unsqueeze(1)
         att, _ = self.cross_attn(v_s, q_s, q_s)
-        fused = self.norm1(v_s + att).squeeze(1)
+        fused = self.norm1(v_s + att)
+        self_att, _ = self.self_attn(fused, fused, fused)
+        fused = self.norm2(fused + self_att).squeeze(1)
         return self.classifier(torch.cat([fused, q], dim=-1))
 
     def predict(self, images, questions, answer_index):
@@ -266,52 +291,38 @@ class RadarSystem:
         self.cnn_engine = _LegacyCNNInferenceEngine(cnn_best, answer_index_path, device=self.device)
 
     # ---------------------------------------------------------------
-    def _load_yolo(self, yolo_conf):
-        yolo_weights = os.path.join(self.base_dir, "models", "yolov5_aircraft", "weights", "best.pt")
-        if not os.path.exists(yolo_weights):
-            raise FileNotFoundError(
-                f"Fine-tuned YOLOv5 weights not found at {yolo_weights}. "
-                "Copy best.pt from the teammate's Drive "
-                "(models/yolov5_aircraft/weights/best.pt).")
-        if not os.path.exists(self.yolo_root):
-            raise FileNotFoundError(
-                f"YOLOv5 repo not found at {self.yolo_root}. Run "
-                f"`git clone https://github.com/ultralytics/yolov5 {self.yolo_root}` "
-                f"and `pip install -r {self.yolo_root}/requirements.txt` once.")
+    def _load_yolo(self, yolo_conf=0.25):
+        """Load YOLOv5 from a local repository using torch.hub."""
 
-        # Your repo has its OWN top-level `models` package (cnn_model.py
-        # etc.) which collides with YOLOv5's own `models/common.py`.
-        # Temporarily clear it out of sys.modules/sys.path while torch.hub
-        # loads YOLOv5, then put YOUR `models` package back so anything
-        # constructed after this point still gets the right one.
-        own_models_mod = sys.modules.get("models")
-        for mod_name in list(sys.modules):
-            if mod_name == "models" or mod_name.startswith("models."):
-                del sys.modules[mod_name]
-        if self.yolo_root in sys.path:
-            sys.path.remove(self.yolo_root)
-        sys.path.insert(0, self.yolo_root)
+        weights = os.path.join(
+            self.base_dir, "models", "yolov5_aircraft", "weights", "best.pt"
+        )
+        if not os.path.exists(weights):
+            raise FileNotFoundError(f"YOLO weights not found at {weights}")
 
-        # best.pt was saved on Linux/Colab and has a PosixPath object
-        # pickled inside its checkpoint. Windows' pathlib can't instantiate
-        # PosixPath (it only has WindowsPath) -- this temporarily aliases it
-        # so unpickling succeeds, then restores it right after.
-        _real_posix_path = pathlib.PosixPath
+        if not self.yolo_root or not os.path.exists(self.yolo_root):
+            raise FileNotFoundError(
+                f"YOLOv5 repo not found at {self.yolo_root}. Clone https://github.com/ultralytics/yolov5"
+            )
+
+        # Windows fix for YOLOv5 checkpoints trained on Linux/Colab
+        _original_posix = pathlib.PosixPath
         pathlib.PosixPath = pathlib.WindowsPath
+
         try:
-            self.yolo_model = torch.hub.load(self.yolo_root, "custom", path=yolo_weights, source="local")
+            self.yolo_model = torch.hub.load(
+                self.yolo_root,
+                "custom",
+                path=weights,
+                source="local",
+                force_reload=True,
+            )
         finally:
-            pathlib.PosixPath = _real_posix_path
+            pathlib.PosixPath = _original_posix
+
         self.yolo_model.conf = yolo_conf
+        
 
-        sys.path.remove(self.yolo_root)
-        for mod_name in list(sys.modules):
-            if mod_name == "models" or mod_name.startswith("models."):
-                del sys.modules[mod_name]
-        if own_models_mod is not None:
-            sys.modules["models"] = own_models_mod
-
-    # ---------------------------------------------------------------
     def _load_renderer(self):
         # Your real RadarRenderer, imported directly -- used only for its
         # get_norm_coords() math here, no rendering happens at inference time.
