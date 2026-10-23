@@ -1,0 +1,102 @@
+{
+  "n": 500,
+  "per_gauge": {
+    "pitch": {
+      "unit": "deg",
+      "MAE": 0.17,
+      "within_1": 99.4,
+      "baseline_MAE": 2.365,
+      "baseline_within_1": 21.0
+    },
+    "roll": {
+      "unit": "deg",
+      "MAE": 0.417,
+      "within_2": 99.4,
+      "baseline_MAE": 2.768,
+      "baseline_within_2": 77.0
+    },
+    "airspeed": {
+      "unit": "kt",
+      "MAE": 0.95,
+      "within_5": 99.6,
+      "baseline_MAE": 36.362,
+      "baseline_within_5": 5.0
+    },
+    "altitude": {
+      "unit": "ft",
+      "MAE": 3.527,
+      "within_100": 100.0,
+      "baseline_MAE": 2417.727,
+      "baseline_within_100": 0.4
+    },
+    "vs": {
+      "unit": "ft/min",
+      "MAE": 10.088,
+      "within_100": 100.0,
+      "baseline_MAE": 209.693,
+      "baseline_within_100": 7.6
+    },
+    "turn": {
+      "unit": "std-rate",
+      "MAE": 0.023,
+      "within_0.2": 100.0,
+      "baseline_MAE": 0.26,
+      "baseline_within_0.2": 67.6
+    },
+    "rpm": {
+      "unit": "rpm",
+      "MAE": 12.275,
+      "within_100": 100.0,
+      "baseline_MAE": 856.023,
+      "baseline_within_100": 0.0
+    },
+    "heading": {
+      "unit": "deg",
+      "MAE": 0.966,
+      "within_5": 100.0,
+      "baseline_MAE": 89.432,
+      "baseline_within_5": 2.0
+    },
+    "altitude_coarse": {
+      "unit": "ft",
+      "MAE": 77.654,
+      "within_100": 78.8,
+      "baseline_MAE": 2417.727,
+      "baseline_within_100": 0.4
+    },
+    "altitude_shorthand": {
+      "unit": "ft",
+      "MAE": 41.165,
+      "within_100": 86.0,
+      "baseline_MAE": 2417.727,
+      "baseline_within_100": 0.4
+    },
+    "rpm_coarse": {
+      "unit": "rpm",
+      "MAE": 29.599,
+      "within_100": 99.0,
+      "baseline_MAE": 856.023,
+      "baseline_within_100": 0.0
+    },
+    "airspeed_coarse": {
+      "unit": "kt",
+      "MAE": 1.253,
+      "within_5": 98.8,
+      "baseline_MAE": 36.362,
+      "baseline_within_5": 5.0
+    }
+  },
+  "note": "baseline = always predict the TRAIN mean (heading: train circular mean); phase baseline = always the most common train phase",
+  "phase": {
+    "accuracy": 100.0,
+    "baseline_majority_accuracy": 20.0,
+    "baseline_phase": "engine_off"
+  },
+  "ckpt": "C:\\Users\\krupa\\sem6\\capstone\\datasets\\vqa-demo\\cockpit2\\dataset_v2\\model_v2\\best_model.pt",
+  "split": "all",
+  "needle_use": {
+    "rpm": true,
+    "airspeed": true,
+    "vs": false
+  }
+}
