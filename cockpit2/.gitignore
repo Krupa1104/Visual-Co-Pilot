@@ -27,3 +27,7 @@ dataset_v2_test/
 
 # zip archives of the dataset / test set -- local only
 *.zip
+
+
+# hold-out set images (results/final_holdout/ is committed, the 500 images are not)
+dataset_holdout/

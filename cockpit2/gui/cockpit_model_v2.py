@@ -27,8 +27,8 @@ Changes vs CockpitNet (v1):
     100 rpm vs ~32 / 96-98% in runs 1-2. Inside each phase the RPM prediction barely
     moved (level_flight: prediction std 34 vs true std 99, error-vs-true correlation
     -0.93): the model output the phase's typical RPM instead of reading the (clearly
-    visible) needle. Cause: each gauge in the shared regression is normalised by its
-    std over ALL phases, so a 100 rpm mistake costs almost nothing. Run 5 gave the
+    visible) needle. Why this happened is not established (an explanation based on
+    the per-gauge normalisation was checked and not supported). Run 5 gave the
     tachometer an angle head (sin/cos, one turn per period) -> RPM 11.5 / 100%, but
     airspeed then showed the same shortcut (taxi: prediction std 2.1 vs true 7.2,
     correlation -0.99; 85.1% within 5 kt vs 96.3%). Run 6 therefore gives EVERY

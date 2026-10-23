@@ -37,7 +37,8 @@ cockpit2/
 │       └── split.csv             # which image was train / val / test
 ├── results/
 │   ├── run3_val/                 # run 3 re-evaluated on the validation set (eval_v2.py)
-│   └── run6_val/                 # run 6 on the validation set + decision.txt (PASS)
+│   ├── run6_val/                 # run 6 on the validation set + decision.txt (PASS)
+│   └── final_holdout/            # run 6 on the fresh 500-frame hold-out set (headline result)
 ├── train_log*.txt                # console logs of training runs 1-6
 ├── requirements.txt
 └── README.md
@@ -48,6 +49,7 @@ cockpit2/
 |---|---|---|
 | Dataset images (2,500 PNG crops, 936×729) + `labels.csv` | large | kept locally / shared by Drive |
 | `dataset_v2/model_v2/best_model.pt` | ~45 MB | kept locally / shared separately (GitHub Release or Drive) |
+| Hold-out images (`dataset_holdout/`, 500 PNG crops + labels.csv) | – | local only; only `results/final_holdout/` is in git |
 | capture self-test sheets, `_fullcheck` screenshots, `vsi_probe/` images, backups | – | local only |
 
 To run the app you need `best_model.pt` in `cockpit2/dataset_v2/model_v2/`.
@@ -109,8 +111,34 @@ The final model was chosen on the **validation** set (375 frames) by a rule fixe
 run 6 was trained: every gauge and phase within 1 point of run 3's "% within tolerance", and
 RPM ≥ 95%. Run 6 passed (`results/run6_val/decision.txt`).
 
-Test set (375 frames = 75 per phase). Source: `dataset_v2/model_v2/test_metrics.json`.
-The baseline is "always predict the training mean".
+### Headline: fresh hold-out set (evaluated once)
+500 new frames (100 per phase) were captured with new seeds after run 6 was chosen, and run 6
+was evaluated on them once (`process/eval_v2.py --split all`). Source:
+`results/final_holdout/metrics.json`. The baseline is "always predict the training mean"
+(computed from dataset_v2's train split).
+
+| Gauge (tolerance) | MAE | within tolerance | baseline within |
+|---|---|---|---|
+| pitch (±1°) | 0.17° | 99.4% | 21.0% |
+| roll (±2°) | 0.42° | 99.4% | 77.0% |
+| airspeed (±5 kt) | 0.95 kt | 99.6% | 5.0% |
+| altitude (±100 ft) | 3.53 ft | 100% | 0.4% |
+| vertical speed (±100 fpm) | 10.09 fpm | 100% | 7.6% |
+| turn rate (±0.2) | 0.02 | 100% | 67.6% |
+| RPM (±100) | 12.28 | 100% | 0% |
+| heading (±5°) | 0.97° | 100% | 2.0% |
+| phase | – | 100% accuracy | 20% (majority class) |
+
+All 9 answers pooled: 99.8% (4492/4500). All 9 answers correct on the same image: 98.6%
+(493/500). The 8 misses: pitch on 3 climb frames (about 1.0–1.1°), roll on 3 level_flight
+frames (2.2–2.4°), and airspeed on climb_0094 and level_flight_0092. This is within about a
+point of the development test set below, so designing runs 3–6 on test errors did not
+inflate the results.
+
+### Development test set
+375 frames = 75 per phase. Source: `dataset_v2/model_v2/test_metrics.json`.
+Runs 3–6 were designed after looking at these errors (see Limitations), so this is not the
+headline figure. The baseline is "always predict the training mean".
 
 | Gauge (tolerance) | MAE | within tolerance | baseline within |
 |---|---|---|---|
@@ -156,7 +184,8 @@ Run history (test set, % within tolerance):
   about 40 kt, so readings at taxi speeds are less precise.
 - **Development test set.** Runs 3–6 were designed after looking at errors on the 375 test
   images, so they are no longer fully unseen; the final model was chosen on validation
-  instead. A fresh hold-out set (new captures, evaluated once) will give the final figure.
+  instead, and the headline figure comes from the fresh hold-out set (500 new captures,
+  evaluated once).
 - **Results come from one training seed per run** (run 3 was also repeated with seed 7).
   Differences of about one point between runs may be noise.
 - **Small costs of run 6:** on validation, pitch has 2 frames out of tolerance (run 3: 0) and
