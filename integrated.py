@@ -35,7 +35,7 @@ Setup:
    since this is one process, not two separate subprocesses like before)
 
 Run FROM THE REPO ROOT (needs cockpit2/ (and/or cockpit/) and radar/ next to it):
-  python integrated.py --radar_base_dir "C:\...\radar_base"
+  python integrated.py        (expects radar/radar_base and radar/yolov5)
       -> Cockpit uses model v2 by default (cockpit2/dataset_v2/model_v2/best_model.pt)
   python integrated.py --cockpit_version v1 --cockpit_data_dir "C:\...\consolidated" ...
       -> old v1 model (kept for comparison only)
@@ -92,9 +92,9 @@ parser.add_argument("--cockpit_img_height", type=int, default=224)
 parser.add_argument("--cockpit_use_letterbox", action="store_true")
 parser.add_argument("--cockpit_confidence_threshold", type=float, default=0.35)
 # Radar args -- same names/defaults as radar/app.py's own parser.
-parser.add_argument("--radar_base_dir", default=os.path.join(REPO_ROOT, "radar_base"),
+parser.add_argument("--radar_base_dir", default=os.path.join(REPO_ROOT, "radar", "radar_base"),
                      help="Your local radar_base/ folder (models/, data/, logs/). "
-                          "Default: <repo root>/radar_base.")
+                          "Default: radar/radar_base.")
 parser.add_argument("--radar_repo_root", default=None)
 parser.add_argument("--radar_yolo_root", default=os.path.join(REPO_ROOT, "radar", "yolov5"),
                      help="Local YOLOv5 code. Default: radar/yolov5.")

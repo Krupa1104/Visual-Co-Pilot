@@ -23,3 +23,7 @@ tqdm
 
 # Only needed if regenerating data via data_collection/opensky_collector.py
 # requests
+
+
+# YOLOv5 (loaded from radar/yolov5 via torch.hub) needs this; radar_system.py also imports it at the top
+ultralytics
