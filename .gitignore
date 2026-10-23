@@ -12,3 +12,14 @@ radar/venv/
 # Python cache
 __pycache__/
 *.pyc
+
+# pytest (generated; report.html / performance.json are kept locally as PPT evidence)
+.pytest_cache/
+tests/results/
+
+# radar data if placed at the repo root (radar/radar_base/ is already ignored by radar/.gitignore)
+/radar_base/
+
+# model weights never go in git
+*.pt
+*.pth
