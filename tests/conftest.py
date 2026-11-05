@@ -34,7 +34,7 @@ def _first_existing(*paths):
     for p in paths:
         if p and os.path.isdir(p):
             return p
-    return paths[0]
+    return next(p for p in paths if p)   # never None: a missing folder then just makes the radar tests skip
 
 
 RADAR_BASE = _first_existing(os.environ.get("VCP_RADAR_BASE"),

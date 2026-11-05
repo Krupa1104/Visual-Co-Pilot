@@ -1,0 +1,153 @@
+
+BALANCED SAMPLE DISTRIBUTION
+Category 0    :  56 selected
+Category 1    :  56 selected
+Category 2    :  56 selected
+Category 3    :  56 selected
+Category 4    :  56 selected
+Category 5    :  55 selected
+Category 6    :  55 selected
+Category 7    :  55 selected
+Category 8+   :  55 selected
+Total selected: 500
+Loading YOLOv5 repository: D:\Capstone\Review3\Final_Radar\models\yolov5
+Loading checkpoint: D:\Capstone\Review3\Final_Radar\models\yolov5\weights\best.pt
+YOLOv5  v7.0-561-gaf08ba15 Python-3.11.7 torch-2.15.0+cpu CPU
+
+Fusing layers... 
+Model summary: 68 layers, 7,015,519 parameters, 0 gradients, 15.8 GFLOPs
+Adding AutoShape... 
+
+========== YOLO MODEL DIAGNOSTICS ==========
+Model class names: {0: 'aircraft', 1: 'callsign_text'}
+Number of classes: 2
+Dataset classes: 0 = aircraft, 1 = text
+============================================
+
+
+Evaluating 500 image(s)...
+[1/500] radar_03951.png | GT aircraft: 2 | Pred aircraft: 34
+[2/500] radar_02105.png | GT aircraft: 2 | Pred aircraft: 36
+[3/500] radar_01737.png | GT aircraft: 5 | Pred aircraft: 52
+[4/500] radar_02764.png | GT aircraft: 5 | Pred aircraft: 52
+[5/500] radar_03370.png | GT aircraft: 2 | Pred aircraft: 36
+[6/500] radar_01218.png | GT aircraft: 3 | Pred aircraft: 35
+[7/500] radar_03265.png | GT aircraft: 5 | Pred aircraft: 51
+[8/500] radar_00599.png | GT aircraft: 2 | Pred aircraft: 35
+[9/500] radar_03634.png | GT aircraft: 4 | Pred aircraft: 44
+[10/500] radar_02115.png | GT aircraft: 4 | Pred aircraft: 56
+[11/500] radar_03019.png | GT aircraft: 6 | Pred aircraft: 50
+[12/500] radar_02393.png | GT aircraft: 11 | Pred aircraft: 70
+[13/500] radar_00322.png | GT aircraft: 12 | Pred aircraft: 77
+[14/500] radar_00909.png | GT aircraft: 3 | Pred aircraft: 47
+[15/500] radar_00172.png | GT aircraft: 0 | Pred aircraft: 25
+[16/500] radar_03438.png | GT aircraft: 6 | Pred aircraft: 56
+[17/500] radar_02748.png | GT aircraft: 6 | Pred aircraft: 51
+[18/500] radar_00285.png | GT aircraft: 1 | Pred aircraft: 32
+[19/500] radar_02990.png | GT aircraft: 0 | Pred aircraft: 26
+[20/500] radar_01171.png | GT aircraft: 6 | Pred aircraft: 52
+[21/500] radar_02656.png | GT aircraft: 5 | Pred aircraft: 48
+[22/500] radar_00831.png | GT aircraft: 8 | Pred aircraft: 64
+[23/500] radar_00771.png | GT aircraft: 8 | Pred aircraft: 65
+[24/500] radar_00192.png | GT aircraft: 6 | Pred aircraft: 48
+[25/500] radar_03288.png | GT aircraft: 4 | Pred aircraft: 42
+[26/500] radar_02001.png | GT aircraft: 7 | Pred aircraft: 55
+[27/500] radar_04178.png | GT aircraft: 7 | Pred aircraft: 57
+[28/500] radar_01943.png | GT aircraft: 6 | Pred aircraft: 57
+[29/500] radar_00297.png | GT aircraft: 0 | Pred aircraft: 26
+[30/500] radar_02710.png | GT aircraft: 3 | Pred aircraft: 41
+[31/500] radar_03439.png | GT aircraft: 4 | Pred aircraft: 46
+[32/500] radar_02483.png | GT aircraft: 2 | Pred aircraft: 36
+[33/500] radar_02555.png | GT aircraft: 2 | Pred aircraft: 37
+[34/500] radar_01772.png | GT aircraft: 5 | Pred aircraft: 52
+[35/500] radar_00815.png | GT aircraft: 0 | Pred aircraft: 25
+[36/500] radar_02344.png | GT aircraft: 3 | Pred aircraft: 41
+[37/500] radar_03149.png | GT aircraft: 11 | Pred aircraft: 76
+[38/500] radar_02176.png | GT aircraft: 4 | Pred aircraft: 49
+[39/500] radar_00730.png | GT aircraft: 3 | Pred aircraft: 40
+[40/500] radar_03103.png | GT aircraft: 0 | Pred aircraft: 26
+[41/500] radar_01417.png | GT aircraft: 2 | Pred aircraft: 29
+[42/500] radar_01270.png | GT aircraft: 3 | Pred aircraft: 38
+[43/500] radar_04208.png | GT aircraft: 5 | Pred aircraft: 58
+[44/500] radar_00272.png | GT aircraft: 5 | Pred aircraft: 47
+[45/500] radar_03622.png | GT aircraft: 8 | Pred aircraft: 68
+[46/500] radar_00507.png | GT aircraft: 2 | Pred aircraft: 36
+[47/500] radar_02320.png | GT aircraft: 5 | Pred aircraft: 47
+[48/500] radar_04399.png | GT aircraft: 10 | Pred aircraft: 75
+[49/500] radar_01796.png | GT aircraft: 0 | Pred aircraft: 26
+[50/500] radar_02345.png | GT aircraft: 4 | Pred aircraft: 47
+[51/500] radar_04006.png | GT aircraft: 6 | Pred aircraft: 51
+[52/500] radar_03188.png | GT aircraft: 2 | Pred aircraft: 36
+[53/500] radar_03032.png | GT aircraft: 8 | Pred aircraft: 54
+[54/500] radar_03851.png | GT aircraft: 1 | Pred aircraft: 27
+[55/500] radar_03449.png | GT aircraft: 4 | Pred aircraft: 44
+[56/500] radar_00906.png | GT aircraft: 0 | Pred aircraft: 23
+[57/500] radar_03942.png | GT aircraft: 6 | Pred aircraft: 47
+[58/500] radar_02648.png | GT aircraft: 0 | Pred aircraft: 26
+[59/500] radar_03948.png | GT aircraft: 4 | Pred aircraft: 51
+[60/500] radar_04322.png | GT aircraft: 7 | Pred aircraft: 55
+[61/500] radar_04189.png | GT aircraft: 3 | Pred aircraft: 43
+[62/500] radar_00502.png | GT aircraft: 1 | Pred aircraft: 34
+[63/500] radar_03368.png | GT aircraft: 5 | Pred aircraft: 47
+[64/500] radar_01472.png | GT aircraft: 3 | Pred aircraft: 38
+[65/500] radar_00455.png | GT aircraft: 10 | Pred aircraft: 78
+[66/500] radar_04429.png | GT aircraft: 3 | Pred aircraft: 44
+[67/500] radar_03136.png | GT aircraft: 7 | Pred aircraft: 61
+[68/500] radar_01029.png | GT aircraft: 0 | Pred aircraft: 27
+[69/500] radar_00280.png | GT aircraft: 3 | Pred aircraft: 41
+[70/500] radar_01335.png | GT aircraft: 4 | Pred aircraft: 46
+[71/500] radar_01822.png | GT aircraft: 6 | Pred aircraft: 57
+[72/500] radar_00075.png | GT aircraft: 7 | Pred aircraft: 58
+[73/500] radar_00775.png | GT aircraft: 1 | Pred aircraft: 28
+[74/500] radar_02275.png | GT aircraft: 6 | Pred aircraft: 55
+[75/500] radar_01074.png | GT aircraft: 5 | Pred aircraft: 48
+[76/500] radar_00078.png | GT aircraft: 7 | Pred aircraft: 62
+[77/500] radar_03817.png | GT aircraft: 5 | Pred aircraft: 49
+[78/500] radar_01091.png | GT aircraft: 4 | Pred aircraft: 48
+[79/500] radar_03043.png | GT aircraft: 1 | Pred aircraft: 28
+[80/500] radar_01530.png | GT aircraft: 0 | Pred aircraft: 25
+[81/500] radar_02434.png | GT aircraft: 4 | Pred aircraft: 43
+[82/500] radar_03784.png | GT aircraft: 6 | Pred aircraft: 58
+[83/500] radar_00216.png | GT aircraft: 4 | Pred aircraft: 47
+[84/500] radar_04183.png | GT aircraft: 7 | Pred aircraft: 60
+[85/500] radar_00905.png | GT aircraft: 7 | Pred aircraft: 56
+[86/500] radar_01680.png | GT aircraft: 8 | Pred aircraft: 63
+[87/500] radar_02217.png | GT aircraft: 4 | Pred aircraft: 42
+[88/500] radar_02753.png | GT aircraft: 4 | Pred aircraft: 43
+[89/500] radar_01597.png | GT aircraft: 5 | Pred aircraft: 51
+[90/500] radar_04375.png | GT aircraft: 6 | Pred aircraft: 55
+[91/500] radar_01653.png | GT aircraft: 3 | Pred aircraft: 41
+[92/500] radar_04125.png | GT aircraft: 3 | Pred aircraft: 42
+[93/500] radar_01013.png | GT aircraft: 4 | Pred aircraft: 42
+[94/500] radar_01043.png | GT aircraft: 4 | Pred aircraft: 42
+[95/500] radar_00211.png | GT aircraft: 2 | Pred aircraft: 36
+[96/500] radar_03893.png | GT aircraft: 2 | Pred aircraft: 36
+[97/500] radar_01183.png | GT aircraft: 3 | Pred aircraft: 38
+[98/500] radar_01866.png | GT aircraft: 2 | Pred aircraft: 33
+[99/500] radar_01384.png | GT aircraft: 3 | Pred aircraft: 42
+[100/500] radar_03289.png | GT aircraft: 5 | Pred aircraft: 46
+[101/500] radar_03487.png | GT aircraft: 5 | Pred aircraft: 49
+[102/500] radar_00539.png | GT aircraft: 4 | Pred aircraft: 43
+[103/500] radar_03672.png | GT aircraft: 2 | Pred aircraft: 35
+[104/500] radar_00724.png | GT aircraft: 0 | Pred aircraft: 25
+[105/500] radar_01773.png | GT aircraft: 9 | Pred aircraft: 63
+[106/500] radar_02819.png | GT aircraft: 6 | Pred aircraft: 50
+[107/500] radar_01185.png | GT aircraft: 1 | Pred aircraft: 36
+[108/500] radar_02524.png | GT aircraft: 8 | Pred aircraft: 58
+[109/500] radar_02453.png | GT aircraft: 5 | Pred aircraft: 48
+[110/500] radar_00320.png | GT aircraft: 5 | Pred aircraft: 46
+[111/500] radar_01613.png | GT aircraft: 6 | Pred aircraft: 55
+[112/500] radar_01170.png | GT aircraft: 8 | Pred aircraft: 67
+[113/500] radar_04013.png | GT aircraft: 7 | Pred aircraft: 53
+[114/500] radar_03924.png | GT aircraft: 8 | Pred aircraft: 60
+[115/500] radar_01236.png | GT aircraft: 3 | Pred aircraft: 43
+[116/500] radar_00527.png | GT aircraft: 1 | Pred aircraft: 30
+[117/500] radar_01788.png | GT aircraft: 7 | Pred aircraft: 63
+[118/500] radar_00259.png | GT aircraft: 7 | Pred aircraft: 57
+[119/500] radar_01718.png | GT aircraft: 3 | Pred aircraft: 42
+[120/500] radar_02118.png | GT aircraft: 7 | Pred aircraft: 58
+[121/500] radar_02850.png | GT aircraft: 5 | Pred aircraft: 46
+[122/500] radar_04161.png | GT aircraft: 0 | Pred aircraft: 26
+[123/500] radar_02014.png | GT aircraft: 6 | Pred aircraft: 53
+[124/500] radar_03132.png | GT aircraft: 6 | Pred aircraft: 58
+[125/500] radar_00749.png | GT aircraft: 7 | Pred aircraft: 66

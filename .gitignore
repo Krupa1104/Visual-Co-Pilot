@@ -23,3 +23,17 @@ tests/results/
 # model weights never go in git
 *.pt
 *.pth
+
+# radar2: code, configs and test-split ids in git; data, weights, archives, outputs and logs local only
+radar2/data/*
+!radar2/data/splits/
+radar2/data/splits/train.jsonl
+radar2/data/splits/val.jsonl
+radar2/models/
+radar2/outputs/*
+!radar2/outputs/radar_eval/
+radar2/logs/
+radar2/*.zip
+radar2/*.tar
+
+radar2/reports/**/*.png

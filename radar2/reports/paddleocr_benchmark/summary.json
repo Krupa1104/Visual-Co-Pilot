@@ -1,0 +1,40 @@
+{
+  "images_evaluated": 100,
+  "ground_truth_callsigns": 457,
+  "matched_yolo_callsign_detections": 453,
+  "detection_recall": 0.9912472647702407,
+  "end_to_end_custom": {
+    "callsigns": 457,
+    "exact_matches": 256,
+    "exact_accuracy": 0.5601750547045952,
+    "character_errors": 877,
+    "character_accuracy": 0.6801604668125456,
+    "mean_seconds_per_crop": 0.11622738145833021
+  },
+  "end_to_end_paddle": {
+    "callsigns": 457,
+    "exact_matches": 426,
+    "exact_accuracy": 0.9321663019693655,
+    "character_errors": 112,
+    "character_accuracy": 0.9591539022611233,
+    "mean_seconds_per_crop": 0.8809736514349404
+  },
+  "matched_crop_custom": {
+    "callsigns": 453,
+    "exact_matches": 256,
+    "exact_accuracy": 0.565121412803532,
+    "character_errors": 853,
+    "character_accuracy": 0.6861662987490802,
+    "mean_seconds_per_crop": 0.11622738145833021
+  },
+  "matched_crop_paddle": {
+    "callsigns": 453,
+    "exact_matches": 426,
+    "exact_accuracy": 0.9403973509933775,
+    "character_errors": 88,
+    "character_accuracy": 0.9676232523914643,
+    "mean_seconds_per_crop": 0.8809736514349404
+  },
+  "elapsed_seconds": 502.50396479998017,
+  "results_csv": "D:\\Capstone\\Review3\\Final_Radar\\reports\\paddleocr_benchmark\\comparison.csv"
+}

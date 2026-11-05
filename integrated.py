@@ -22,20 +22,19 @@ FLOW:
      answer, readings and a collapsible "Details" section on the right.
   5. "<- Modules" returns to the landing view. Systems stay loaded in memory.
 
-GUI redesign merged onto the team's radar-voice version of this file (radar Speak button, read-aloud, radar_base / radar/yolov5 defaults). Every GUI change is in this file;
-the cockpit model code (cockpit2/gui/copilot_core_v2.py, cockpit/gui/copilot_core.py) is called exactly as before. radar/radar_system.py is maintained by the radar team;
-its final version (routing fixes, YOLO average detection confidence) is committed alongside this file.
+GUI redesign merged onto the team's radar-voice version of this file (radar Speak button, read-aloud).
+Nov 2026: the radar card uses the rebuilt radar module in radar2/ (YOLOv5 + PaddleOCR + VQA classifier;
+the previous radar/ module is kept in the repo but no longer used by this app). Cockpit questions are
+routed by rules first and Qwen2.5-1.5B only for the rest (cockpit2/gui/copilot_core_v2.py).
 
 Requires Gradio 6 (theme/css/js are passed to launch(), not to gr.Blocks()).
 
-Setup:
-  pip install gradio torch torchvision pandas pillow sentence-transformers --break-system-packages
-  (plus radar/requirements-radar.txt's deps, e.g. YOLOv5's requirements --
-   both modules' dependencies now need to coexist in ONE Python environment,
-   since this is one process, not two separate subprocesses like before)
+Setup: see README.md (one Python 3.12 environment from radar2/requirements.txt plus
+  transformers and scikit-learn; both modules run in ONE process, so their dependencies
+  have to coexist in that environment).
 
-Run FROM THE REPO ROOT (needs cockpit2/ (and/or cockpit/) and radar/ next to it):
-  python integrated.py        (expects radar/radar_base and radar/yolov5)
+Run FROM THE REPO ROOT (needs cockpit2/ (and/or cockpit/) and radar2/ next to it):
+  python integrated.py        (expects radar2/ with models/yolov5 and models/vqa/best.pt)
       -> Cockpit uses model v2 by default (cockpit2/dataset_v2/model_v2/best_model.pt)
   python integrated.py --cockpit_version v1 --cockpit_data_dir "C:\...\consolidated" ...
       -> old v1 model (kept for comparison only)
@@ -53,6 +52,9 @@ import time
 import threading
 import html
 import argparse
+# torch must be imported before paddle/paddleocr on Windows, otherwise torch's shm.dll fails
+# to load (WinError 127). Radar imports paddleocr, so import torch here, first.
+import torch
 
 import gradio as gr
 from PIL import Image
@@ -60,7 +62,7 @@ from PIL import Image
 REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
 COCKPIT_DIR = os.path.join(REPO_ROOT, "cockpit", "gui")
 COCKPIT2_DIR = os.path.join(REPO_ROOT, "cockpit2", "gui")
-RADAR_DIR = os.path.join(REPO_ROOT, "radar")
+RADAR_DIR = os.path.join(REPO_ROOT, "radar2")
 
 # Both modules do local, same-folder imports (`from copilot_core import
 # CopilotSystem`, `from radar_system import RadarSystem`). Since everything
@@ -74,9 +76,11 @@ for _p in (COCKPIT_DIR, COCKPIT2_DIR, RADAR_DIR):
 parser = argparse.ArgumentParser()
 # Cockpit model choice. v2 = CockpitNetV2 on dataset_v2 (default); v1 = old CockpitNet.
 parser.add_argument("--cockpit_version", choices=["v1", "v2"], default="v2")
-parser.add_argument("--cockpit2_model_dir",
-                    default=os.path.join(REPO_ROOT, "cockpit2", "dataset_v2", "model_v2"),
-                    help="v2: folder containing best_model.pt")
+parser.add_argument(
+    "--cockpit2_model_dir",
+    default=os.path.join(REPO_ROOT, "cockpit2", "dataset_v2", "model_v2"),
+    help="v2: folder containing best_model.pt"
+)
 parser.add_argument("--cockpit2_reference",
                     default=os.path.join(REPO_ROOT, "cockpit2", "dataset_v2", "reference_panel.png"),
                     help="v2: reference panel image for the 'is this the training view?' check")
@@ -84,6 +88,13 @@ parser.add_argument("--cockpit_llm_on_cpu", action="store_true",
                     help="v2: run the Qwen intent router on CPU (use if the GPU runs out of memory)")
 parser.add_argument("--cockpit_no_llm", action="store_true",
                     help="v2: skip the Qwen router, use the TF-IDF fallback (fast start, no download)")
+parser.add_argument("--cockpit_llm_mode", choices=["generate", "choice"], default="generate",
+                    help="v2: how Qwen answers: 'generate' writes a label (original), 'choice' picks one of "
+                         "9 numbered options from its scores (cannot invent labels, real probability)")
+parser.add_argument("--torch_threads", type=int, default=None,
+                    help="CPU threads for torch (default: torch's own choice). Measure before changing.")
+parser.add_argument("--cockpit_no_rules", action="store_true",
+                    help="v2: send every question to Qwen (turns off the rule fast path; for comparison)")
 # v1 cockpit args -- same names/defaults as cockpit/gui/app.py's own parser.
 parser.add_argument("--cockpit_data_dir", default=None,
                      help="v1 only: your local consolidated/ folder.")
@@ -91,17 +102,34 @@ parser.add_argument("--cockpit_img_width", type=int, default=224)
 parser.add_argument("--cockpit_img_height", type=int, default=224)
 parser.add_argument("--cockpit_use_letterbox", action="store_true")
 parser.add_argument("--cockpit_confidence_threshold", type=float, default=0.35)
-# Radar args -- same names/defaults as radar/app.py's own parser.
-parser.add_argument("--radar_base_dir", default=os.path.join(REPO_ROOT, "radar", "radar_base"),
-                     help="Your local radar_base/ folder (models/, data/, logs/). "
-                          "Default: radar/radar_base.")
-parser.add_argument("--radar_repo_root", default=None)
-parser.add_argument("--radar_yolo_root", default=os.path.join(REPO_ROOT, "radar", "yolov5"),
-                     help="Local YOLOv5 code. Default: radar/yolov5.")
+# Radar args -- new radar2 module.
+parser.add_argument(
+    "--radar_base_dir",
+    default=os.path.join(REPO_ROOT, "radar2"),
+    help="Path to the new radar2 folder."
+)
+parser.add_argument(
+    "--radar_repo_root",
+    default=os.path.join(REPO_ROOT, "radar2")
+)
+parser.add_argument(
+    "--radar_yolo_root",
+    default=os.path.join(REPO_ROOT, "radar2", "models", "yolov5"),
+    help="Local YOLOv5 repository."
+)
 parser.add_argument("--radar_yolo_conf", type=float, default=0.25)
-parser.add_argument("--radar_cnn_checkpoint", default="cnn_best_model.pth")
+parser.add_argument("--radar_ocr_models", choices=["mobile", "medium"], default="mobile",
+                    help="radar OCR models: 'mobile' (fast, default since 4 Nov) or 'medium' (original)")
+parser.add_argument("--radar_ocr_mode", choices=["crops", "full"], default="crops",
+                    help="radar OCR area: 'crops' around detected aircraft (fast) or 'full' image (original)")
+parser.add_argument(
+    "--radar_cnn_checkpoint",
+    default=os.path.join("models", "vqa", "best.pt")
+)
 parser.add_argument("--share", action="store_true", help="Create a public Gradio share link")
 args = parser.parse_args()
+if args.torch_threads:
+    torch.set_num_threads(args.torch_threads)
 
 # =========================================================================
 # LAZY LOADING -- a module's system is loaded the first time its card is
@@ -137,6 +165,8 @@ def _get_cockpit_system():
             confidence_threshold=args.cockpit_confidence_threshold,
             llm_on_cpu=args.cockpit_llm_on_cpu,
             use_llm=not args.cockpit_no_llm,
+            rules_first=not args.cockpit_no_rules,
+            llm_mode=args.cockpit_llm_mode,
         )
         print(f"Cockpit v2 loaded: {_cockpit_system.model_info}")
         return _cockpit_system, None
@@ -167,7 +197,7 @@ def _get_radar_system():
         return _radar_system, None
     if not args.radar_base_dir:
         return None, ("Radar isn't configured for this run -- restart with "
-                       "--radar_base_dir pointing at your radar_base/ folder.")
+                       "--radar_base_dir pointing at the radar2/ folder.")
     from radar_system import RadarSystem
     print(f"Loading Radar (checkpoint: {args.radar_cnn_checkpoint})...")
     radar_kwargs = dict(
@@ -176,8 +206,13 @@ def _get_radar_system():
         yolo_root=args.radar_yolo_root,
         yolo_conf=args.radar_yolo_conf,
         cnn_checkpoint=args.radar_cnn_checkpoint,
+        ocr_models=args.radar_ocr_models,
+        ocr_mode=args.radar_ocr_mode,
     )
-    shared = _shared_llm_for_radar()
+    # Radar is NOT given the cockpit's Qwen: with it, radar's relevance check would run the LLM
+    # (seconds per question) only when the cockpit card happened to be opened first, so radar's
+    # speed and behaviour depended on card order. Without it, radar uses its own keyword gate.
+    shared = {}
     try:
         try:
             _radar_system = RadarSystem(**radar_kwargs, **shared)
@@ -351,8 +386,12 @@ def cockpit_run_analysis(image, question):
         ], active)
         sim = result["panel_similarity"]
         warnings = result.get("warnings") or []
+        router = {"rules": "rules (keyword match)", "qwen": "Qwen2.5-1.5B", "keyword": "keyword fallback",
+                  "tfidf": "TF-IDF"}.get(result.get("router"), result.get("router") or "n/a")
+        if result.get("router") == "qwen" and getattr(system, "llm_mode", "") == "choice":
+            router += f" (option probability {result['confidence'] * 100:.0f}%)"
         meta_items = [("Answered from", result["intent"].replace("_", " "), ""),
-                      ("Routing", f"{result['confidence'] * 100:.0f}%", tone_for(result["confidence"])),
+                      ("Routed by", router, ""),
                       ("Time", fmt_ms(wall_ms), "")]
         if sim is not None:
             meta_items.append(("Panel match", f"{sim:.2f}", "good" if not warnings else "warn"))
@@ -362,8 +401,7 @@ def cockpit_run_analysis(image, question):
         details = kv_table([
             ("Model", system.model_info),
             ("Matched intent", result["intent"]),
-            ("Routing confidence", f"{result['confidence'] * 100:.1f}% (question → intent router, "
-                                   "not the gauge-reading model)"),
+            ("Routed by", router),
             ("Input", CROP_MODE_TEXT.get(result["crop_mode"], result["crop_mode"].replace("_", " "))),
             ("Panel similarity", "n/a" if sim is None else f"{sim:.3f}"),
         ] + timing_rows)
@@ -397,26 +435,38 @@ RADAR_PRESET_QUESTIONS = [
     "What is the callsign of the aircraft with the highest altitude?",
     "Which quadrant of the radar has the most aircraft?",
 ]
-# What actually produced a radar answer, from radar_system's "verdict" (falls back to "kind").
-# Kept honest on purpose: answers read from rendered_frames.json are labelled as metadata, not as
-# something the model read from the image.
+# What actually produced a radar answer, from radar2/radar_system.py's "verdict".
+# One entry per verdict that radar_system.py returns (checked against the code, 4 Nov 2026, incl. the
+# structured routes added that day).
 RADAR_SOURCE_BY_VERDICT = {
-    "yolo_first": "YOLO detector / frame metadata",
-    "yolo_quadrant_count": "YOLO detector",
-    "yolo_count": "YOLO detector",
-    "yolo_metadata_match": "YOLO + frame metadata",
-    "metadata_altitude_extreme": "frame metadata (not read from the image)",
-    "confident": "radar CNN", "low_confidence_hedge": "radar CNN",
-    "low_confidence_decline": "radar CNN", "yolo_mismatch": "radar CNN (YOLO disagrees)",
+    "yolo_geometry": "YOLO detector (box positions)",
+    "yolo_ocr_match": "Image OCR + YOLO",
+    "yolo_ocr_callsigns": "Image OCR + YOLO",
+    "yolo_ocr_fields": "Image OCR + YOLO",
+    "ocr_altitude_extreme": "Image OCR + YOLO",
+    "yolo_ocr_match_not_found": "Image OCR + YOLO (callsign not found)",
+    "yolo_ocr_unreadable": "Image OCR (labels unreadable)",
+    "ocr_altitude_insufficient": "Image OCR (too few readable labels)",
+    "ocr_heading_yesno": "Image OCR (headings) + YOLO",
+    "ocr_heading_unreadable": "Image OCR (headings unreadable)",
+    "ocr_yolo_quadrant": "Image OCR + YOLO box position",
+    "yolo_compass_quadrant": "YOLO detector (box positions)",
+    "yolo_no_aircraft": "YOLO detector (no aircraft)",
+    "vqa_answer": "radar VQA model (CNN)",
+    "vqa_hedged": "radar VQA model (CNN), low confidence",
+    "vqa_low_confidence": "radar VQA model (CNN), declined",
+    "out_of_scope": "out of scope",
+    "analysis_error": "error",
+    "image_missing": "n/a",
+    "question_missing": "n/a",
 }
-RADAR_SOURCE_BY_KIND = {"vqa": "radar CNN", "locate": "callsign lookup (frame metadata)",
-                        "irrelevant": "out of scope"}
+OCR_VERDICTS = {"yolo_ocr_match", "yolo_ocr_callsigns", "yolo_ocr_fields", "ocr_altitude_extreme",
+                "yolo_ocr_match_not_found", "yolo_ocr_unreadable", "ocr_altitude_insufficient",
+                "ocr_heading_yesno", "ocr_heading_unreadable", "ocr_yolo_quadrant"}
 
 
 def radar_source(kind, verdict):
-    if kind == "irrelevant":
-        return RADAR_SOURCE_BY_KIND["irrelevant"]
-    return RADAR_SOURCE_BY_VERDICT.get(verdict) or RADAR_SOURCE_BY_KIND.get(kind) or (kind or "n/a")
+    return RADAR_SOURCE_BY_VERDICT.get(verdict) or (verdict or kind or "n/a")
 
 
 def radar_load():
@@ -442,46 +492,36 @@ def radar_run_analysis(image_path, question):
     result = system.handle_question(image_path, question)
     wall_ms = (time.perf_counter() - t0) * 1000
 
-    # Extract results
-    kind = result.get("kind")
-    conf = result.get("confidence")
     verdict = result.get("verdict")
-    confidence_type = result.get("confidence_type", "model")
+    conf = result.get("confidence")
+    confidence_type = result.get("confidence_type")
+    ocr_conf = result.get("ocr_confidence")
+    n_boxes = len(result.get("detections") or [])
+    source = radar_source(result.get("kind"), verdict)
+    no_conf = verdict in ("out_of_scope", "analysis_error", "image_missing", "question_missing")
 
-    source = radar_source(kind, verdict)
+    # Each confidence is labelled by what it measures: the YOLO number is the mean detection
+    # confidence of the kept aircraft boxes; the OCR number is PaddleOCR's text-recognition score;
+    # the VQA number is the classifier's softmax probability for its answer.
+    conf_rows = []
+    if not no_conf:
+        if conf is not None and confidence_type == "detector":
+            conf_rows.append((f"YOLO detection confidence (avg of {n_boxes} boxes)", conf))
+        elif conf is not None:
+            conf_rows.append(("VQA model confidence", conf))
+        if verdict in OCR_VERDICTS:
+            conf_rows.append(("OCR confidence", ocr_conf))
 
-    # Metadata chips
-    meta_items = []
-
-    if kind or verdict:
-        meta_items.append((
-            "Answered by",
-            source,
-            "bad" if kind == "irrelevant" else ""
-        ))
-
-    from_metadata = verdict in ("yolo_metadata_match", "metadata_altitude_extreme") or kind == "locate"
-    confidence_label = ("YOLO detection confidence (avg)" if confidence_type == "detector"
-                        else "CNN model confidence")
-    if conf is not None:
-        meta_items.append((confidence_label, f"{conf * 100:.1f}%", tone_for(conf)))
-    elif from_metadata:
-        meta_items.append(("Confidence", "N/A — read from frame data", ""))
-    elif kind != "irrelevant":
-        meta_items.append(("Confidence", "N/A", ""))
-
+    meta_items = [("Answered by", source, "bad" if verdict == "out_of_scope" else "")]
+    for label, value in conf_rows:
+        meta_items.append((label, "N/A" if value is None else f"{value * 100:.1f}%",
+                           "" if value is None else tone_for(value)))
     meta_items.append(("Time", fmt_ms(wall_ms), ""))
 
-    # Detailed results table
-    detail_rows = [
-        ("Answered by", source),
-        ("Answer type", kind or "n/a"),
-        (confidence_label if conf is not None else "Confidence",
-         f"{conf * 100:.1f}%" if conf is not None
-         else ("N/A — read from frame data" if from_metadata else "N/A")),
-        ("Verdict", verdict or "n/a"),
-        ("Total", fmt_ms(wall_ms))
-    ]
+    detail_rows = [("Answered by", source), ("Verdict", verdict or "n/a"),
+                   ("Aircraft boxes kept", str(n_boxes))]
+    detail_rows += [(label, "N/A" if value is None else f"{value * 100:.1f}%") for label, value in conf_rows]
+    detail_rows.append(("Total", fmt_ms(wall_ms)))
 
     img = result.get("image")
 
@@ -719,7 +759,7 @@ with gr.Blocks(title="Visual Co-Pilot") as demo:
                 gr.HTML(card_html(RADAR_ICON, "ATC radar",
                                   "Detects aircraft on a radar display and answers questions about "
                                   "traffic.", ["Aircraft count", "Position / quadrant", "Altitude",
-                                               "Callsign"],
+                                               "Heading", "Callsign"],
                                   "Input: radar display image"))
                 radar_card_btn = gr.Button("Open Radar module", variant="primary", size="lg",
                                            elem_classes="vc-card-btn")

@@ -1,0 +1,11 @@
+path: /content/Final_Radar/data/yolo_dataset
+
+train: images/train
+val: images/val
+test: images/test
+
+nc: 2
+
+names:
+  0: aircraft
+  1: callsign_text

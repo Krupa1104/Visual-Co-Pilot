@@ -1,0 +1,61 @@
+qa_id,type,question,expected,answer,verdict,correct,seconds,correct_lenient
+radar_01171_qa_04,aircraft_count,How many aircraft are present in the radar image?,6,I detect 6 aircraft in the radar image.,yolo_geometry,True,3.326,
+radar_00899_qa_04,aircraft_count,How many aircraft are present in the radar image?,7,I detect 7 aircraft in the radar image.,yolo_geometry,True,3.174,
+radar_03982_qa_04,aircraft_count,How many aircraft are present in the radar image?,7,I detect 7 aircraft in the radar image.,yolo_geometry,True,3.316,
+radar_04043_qa_04,aircraft_count,How many aircraft are present in the radar image?,1,I detect 1 aircraft in the radar image.,yolo_geometry,True,3.239,
+radar_03105_qa_04,aircraft_count,How many aircraft are present in the radar image?,7,I detect 7 aircraft in the radar image.,yolo_geometry,True,3.288,
+radar_00327_qa_04,aircraft_count,How many aircraft are present in the radar image?,5,I detect 5 aircraft in the radar image.,yolo_geometry,True,3.292,
+radar_02809_qa_04,aircraft_count,How many aircraft are present in the radar image?,4,I detect 4 aircraft in the radar image.,yolo_geometry,True,3.331,
+radar_02047_qa_04,aircraft_count,How many aircraft are present in the radar image?,5,I detect 5 aircraft in the radar image.,yolo_geometry,True,3.461,
+radar_01149_qa_04,aircraft_count,How many aircraft are present in the radar image?,7,I detect 7 aircraft in the radar image.,yolo_geometry,True,3.197,
+radar_00415_qa_04,aircraft_count,How many aircraft are present in the radar image?,5,I detect 5 aircraft in the radar image.,yolo_geometry,True,2.9,
+radar_02966_qa_02,altitude,Which altitude category contains aircraft JBU204?,10k-20k,I can read callsign JBU204.,yolo_ocr_match,False,10.656,
+radar_00657_qa_02,altitude,Which altitude category contains aircraft KAL511?,20k-30k,I can read callsign KAL511.,yolo_ocr_match,False,6.065,
+radar_02194_qa_02,altitude,Which altitude category contains aircraft AFR302?,30k-40k,I could not reliably locate a readable label for callsign AFR302.,yolo_ocr_match_not_found,False,6.34,
+radar_00672_qa_02,altitude,Which altitude category contains aircraft THY182?,10k-20k,I can read callsign THY182.,yolo_ocr_match,False,4.784,
+radar_03113_qa_02,altitude,Which altitude category contains aircraft EZY418?,40k+,I can read callsign EZY418.,yolo_ocr_match,False,12.016,
+radar_03787_qa_02,altitude,Which altitude category contains aircraft UAL517?,10k-20k,I can read callsign UAL517.,yolo_ocr_match,False,6.122,
+radar_01349_qa_02,altitude,Which altitude category contains aircraft ETD330?,40k+,I could not reliably locate a readable label for callsign ETD330.,yolo_ocr_match_not_found,False,6.061,
+radar_01363_qa_02,altitude,Which altitude category contains aircraft WJA708?,10k-20k,I can read callsign WJA708.,yolo_ocr_match,False,7.614,
+radar_02058_qa_02,altitude,Which altitude category contains aircraft UAL517?,30k-40k,I can read callsign UAL517.,yolo_ocr_match,False,1.646,
+radar_00745_qa_02,altitude,Which altitude category contains aircraft GIA302?,10k-20k,I can read callsign GIA302.,yolo_ocr_match,False,7.259,
+radar_02232_qa_01,callsign,What is the callsign of the selected aircraft?,KAL511,Readable callsigns: KAL511.,yolo_ocr_callsigns,True,1.821,True
+radar_03463_qa_07,callsign,What is the callsign of another aircraft in the image?,UAL517,Readable callsigns: UAL517.,yolo_ocr_callsigns,True,1.909,True
+radar_02690_qa_07,callsign,What is the callsign of another aircraft in the image?,JBU204,"Readable callsigns: JAL508, JBU204, SIA228.",yolo_ocr_callsigns,False,4.88,True
+radar_02112_qa_01,callsign,What is the callsign of the selected aircraft?,EZY418,"Readable callsigns: AXB709, DLH430, EZY418, WJA708.",yolo_ocr_callsigns,False,7.617,True
+radar_00601_qa_07,callsign,What is the callsign of another aircraft in the image?,AXB709,"Readable callsigns: AXB709, JAL508, TAP415.",yolo_ocr_callsigns,False,3.399,True
+radar_03510_qa_01,callsign,What is the callsign of the selected aircraft?,UAL517,"Readable callsigns: ACA620, UAL517.",yolo_ocr_callsigns,False,2.426,True
+radar_03297_qa_07,callsign,What is the callsign of another aircraft in the image?,ACA620,"Readable callsigns: ACA620, BAW921, DLH430, GIA302, JAL508, UAE615.",yolo_ocr_callsigns,False,5.271,True
+radar_02832_qa_01,callsign,What is the callsign of the selected aircraft?,ETD330,"Readable callsigns: ACA620, BAW921, ETD330, KAL511.",yolo_ocr_callsigns,False,5.277,True
+radar_00569_qa_07,callsign,What is the callsign of another aircraft in the image?,FDX901,"Readable callsigns: DLH430, FDX901, UPS438, WJA708.",yolo_ocr_callsigns,False,4.497,True
+radar_03521_qa_07,callsign,What is the callsign of another aircraft in the image?,KAL511,"Readable callsigns: AXB709, EZY418, KAL511, KLM3, KLM315, UAL517.",yolo_ocr_callsigns,False,5.76,True
+radar_01464_qa_03,heading,What compass direction is aircraft ACA620 heading?,W,I can read callsign ACA620.,yolo_ocr_match,False,5.521,
+radar_03835_qa_03,heading,What compass direction is aircraft SAS620 heading?,W,SAS620 has a heading of 260°.,yolo_ocr_match,True,8.411,
+radar_01296_qa_03,heading,What compass direction is aircraft SWR640 heading?,E,I can read callsign SWR640.,yolo_ocr_match,False,2.475,
+radar_00945_qa_03,heading,What compass direction is aircraft THY182 heading?,W,I can read callsign THY182.,yolo_ocr_match,False,8.491,
+radar_00376_qa_03,heading,What compass direction is aircraft ACA620 heading?,S,ACA620 has a heading of 173°.,yolo_ocr_match,True,1.61,
+radar_03534_qa_03,heading,What compass direction is aircraft KAL511 heading?,NW,I can read callsign KAL511.,yolo_ocr_match,False,5.939,
+radar_02758_qa_03,heading,What compass direction is aircraft UAL517 heading?,SW,I can read callsign UAL517.,yolo_ocr_match,False,1.562,
+radar_03242_qa_03,heading,What compass direction is aircraft DLH430 heading?,E,DLH430 has a heading of 110°.,yolo_ocr_match,True,3.812,
+radar_01812_qa_03,heading,What compass direction is aircraft EZY418 heading?,NE,I can read callsign EZY418.,yolo_ocr_match,False,4.415,
+radar_03265_qa_03,heading,What compass direction is aircraft JAL508 heading?,NE,I can read callsign JAL508.,yolo_ocr_match,False,5.066,
+radar_04321_qa_06,quadrant,Which quadrant contains aircraft ANA715?,north-east,I cannot provide a reliable answer to that question from this image.,vqa_low_confidence,False,1.129,
+radar_02570_qa_06,quadrant,Which quadrant contains aircraft UPS438?,north-west,I cannot provide a reliable answer to that question from this image.,vqa_low_confidence,False,1.071,
+radar_01290_qa_06,quadrant,Which quadrant contains aircraft JAL508?,south-west,"My best estimate is: south-west. The model's confidence is low, so please treat this as uncertain.",vqa_hedged,True,1.075,
+radar_01084_qa_06,quadrant,Which quadrant contains aircraft SWR640?,south-west,"My best estimate is: north-east. The model's confidence is low, so please treat this as uncertain.",vqa_hedged,False,1.047,
+radar_00945_qa_06,quadrant,Which quadrant contains aircraft KAL511?,north-east,I cannot provide a reliable answer to that question from this image.,vqa_low_confidence,False,1.055,
+radar_02458_qa_06,quadrant,Which quadrant contains aircraft CPA810?,south-west,I cannot provide a reliable answer to that question from this image.,vqa_low_confidence,False,1.091,
+radar_01560_qa_06,quadrant,Which quadrant contains aircraft UAL517?,south-west,I cannot provide a reliable answer to that question from this image.,vqa_low_confidence,False,1.053,
+radar_02037_qa_06,quadrant,Which quadrant contains aircraft DAL901?,south-east,I cannot provide a reliable answer to that question from this image.,vqa_low_confidence,False,1.049,
+radar_00840_qa_06,quadrant,Which quadrant contains aircraft GIA302?,south-east,I cannot provide a reliable answer to that question from this image.,vqa_low_confidence,False,1.066,
+radar_01023_qa_06,quadrant,Which quadrant contains aircraft FDX901?,north-east,"My best estimate is: south-west. The model's confidence is low, so please treat this as uncertain.",vqa_hedged,False,1.044,
+radar_02818_qa_03,yes_no,Is any aircraft heading E?,no,"I could not reliably read any callsign, altitude, or heading labels in this image.",yolo_ocr_unreadable,False,6.978,
+radar_03771_qa_07,yes_no,Is there any aircraft in the south-east quadrant?,no,no,vqa_answer,True,1.107,
+radar_01764_qa_07,yes_no,Is there any aircraft in the south-east quadrant?,no,no,vqa_answer,True,1.045,
+radar_02287_qa_03,yes_no,Is any aircraft heading E?,no,"I could not reliably read any callsign, altitude, or heading labels in this image.",yolo_ocr_unreadable,False,6.783,
+radar_00444_qa_05,yes_no,Is any aircraft heading S?,no,I can read: THY182; RYR602; ANA715; WJA708; UAL517.,yolo_ocr_fields,False,11.266,
+radar_02167_qa_05,yes_no,Is any aircraft heading NW?,yes,I can read: KAL511.,yolo_ocr_fields,False,1.867,
+radar_01272_qa_05,yes_no,Is any aircraft heading S?,yes,I can read: QFA125; SIA228 — heading 220°; ANA715.,yolo_ocr_fields,False,11.093,
+radar_03504_qa_05,yes_no,Is any aircraft heading SE?,no,I can read: VIR227; ETD330.,yolo_ocr_fields,False,2.656,
+radar_01245_qa_05,yes_no,Is any aircraft heading NE?,yes,I can read: AAL204; UAL517; PS438; THY182.,yolo_ocr_fields,False,7.327,
+radar_01939_qa_03,yes_no,Is any aircraft heading E?,no,"I could not reliably read any callsign, altitude, or heading labels in this image.",yolo_ocr_unreadable,False,6.876,

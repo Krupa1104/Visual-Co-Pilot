@@ -1,0 +1,13 @@
+{
+    "images_evaluated": 100,
+    "ground_truth_aircraft": 457,
+    "aircraft_detected": 455,
+    "aircraft_detection_recall": 0.9956236323851203,
+    "ground_truth_callsign_text_boxes": 457,
+    "callsign_text_detected": 453,
+    "callsign_text_detection_recall": 0.9912472647702407,
+    "ground_truth_callsigns": 457,
+    "exact_callsign_matches": 256,
+    "callsign_exact_match_accuracy": 0.5601750547045952,
+    "character_accuracy": 0.6801604668125456
+}

@@ -1,0 +1,75 @@
+{
+  "setup": {
+    "ocr_models": "medium",
+    "ocr_mode": "crops",
+    "n_per_type": 20,
+    "seed": 2,
+    "usable_test_images": 450,
+    "test_images_also_in_yolo_train_val": 0
+  },
+  "aircraft_count": {
+    "correct": 19,
+    "of": 20,
+    "median_s": 3.37,
+    "max_s": 3.69,
+    "verdicts": {
+      "yolo_geometry": 20
+    }
+  },
+  "altitude": {
+    "correct": 16,
+    "of": 20,
+    "median_s": 12.95,
+    "max_s": 33.08,
+    "verdicts": {
+      "yolo_ocr_match": 18,
+      "yolo_ocr_match_not_found": 2
+    }
+  },
+  "callsign": {
+    "correct": 1,
+    "of": 20,
+    "median_s": 15.85,
+    "max_s": 40.95,
+    "verdicts": {
+      "yolo_ocr_callsigns": 20
+    },
+    "correct_lenient": 18
+  },
+  "heading": {
+    "correct": 14,
+    "of": 20,
+    "median_s": 17.08,
+    "max_s": 37.75,
+    "verdicts": {
+      "yolo_ocr_match_not_found": 5,
+      "yolo_ocr_match": 15
+    }
+  },
+  "quadrant": {
+    "correct": 17,
+    "of": 20,
+    "median_s": 18.05,
+    "max_s": 38.48,
+    "verdicts": {
+      "ocr_yolo_quadrant": 17,
+      "yolo_ocr_match_not_found": 3
+    }
+  },
+  "yes_no": {
+    "correct": 19,
+    "of": 20,
+    "median_s": 2.45,
+    "max_s": 34.7,
+    "verdicts": {
+      "yolo_compass_quadrant": 5,
+      "ocr_heading_yesno": 10,
+      "yolo_no_aircraft": 5
+    }
+  },
+  "all": {
+    "correct": 86,
+    "of": 120,
+    "median_s": 10.79
+  }
+}
