@@ -1,0 +1,84 @@
+question,expected
+What altitude is the plane at?,get_altitude
+How many feet up are we?,get_altitude
+Read me the altimeter.,get_altitude
+Tell me our current height.,get_altitude
+How high above the ground is the aircraft?,get_altitude
+What does the altimeter say right now?,get_altitude
+Altitude?,get_altitude
+Give me the plane's elevation.,get_altitude
+At what height are we cruising?,get_altitude
+What's the reading on the altitude gauge?,get_altitude
+What is our current airspeed?,get_airspeed
+How fast is the aircraft moving?,get_airspeed
+What's the indicated speed in knots?,get_airspeed
+Speed check please.,get_airspeed
+Are we going fast enough to fly?,get_airspeed
+Tell me the velocity of the plane.,get_airspeed
+What does the airspeed indicator show?,get_airspeed
+How quick are we flying?,get_airspeed
+Is our speed above 100 knots?,get_airspeed
+Which direction are we pointed?,get_heading
+What's the compass reading?,get_heading
+What is our heading in degrees?,get_heading
+Are we flying north?,get_heading
+Which way is the aircraft facing?,get_heading
+What bearing are we on?,get_heading
+Tell me the current heading.,get_heading
+Are we headed east or west?,get_heading
+Are the wings level?,is_banking
+Is the plane turning left?,is_banking
+What is the bank angle?,is_banking
+Are we rolling to the right?,is_banking
+Is one wing lower than the other?,is_banking
+How much are we banked?,is_banking
+Is the aircraft leaning to one side?,is_banking
+Are we in a turn?,is_banking
+Are we going up or down?,is_climbing
+Is the nose pointed up?,is_climbing
+Are we descending right now?,is_climbing
+Is the aircraft gaining altitude?,is_climbing
+What is the pitch attitude?,is_climbing
+Are we losing height?,is_climbing
+Is the plane ascending?,is_climbing
+Are we climbing or descending?,is_climbing
+What does the VSI read?,get_vertical_speed
+How many feet per minute are we climbing?,get_vertical_speed
+What is the rate of descent?,get_vertical_speed
+Tell me the vertical speed.,get_vertical_speed
+How fast are we climbing?,get_vertical_speed
+What's the climb rate?,get_vertical_speed
+What is the vertical velocity?,get_vertical_speed
+Rate of climb?,get_vertical_speed
+Is the engine running?,get_rpm
+What does the tachometer show?,get_rpm
+How many RPM is the engine at?,get_rpm
+What's the engine speed?,get_rpm
+Is the propeller turning?,get_rpm
+Has the engine been started?,get_rpm
+Is the motor on?,get_rpm
+Are we airborne?,flight_phase
+Are we still on the ground?,flight_phase
+Is the plane taxiing?,flight_phase
+What stage of the flight is this?,flight_phase
+Are we taking off?,flight_phase
+Is the aircraft parked?,flight_phase
+What is the aircraft doing right now?,flight_phase
+Are we in cruise?,flight_phase
+Have we landed?,flight_phase
+What's the weather like today?,none
+Who is the pilot?,none
+How much fuel is left?,none
+What is the oil pressure?,none
+What time is it?,none
+Tell me about the history of Cessna.,none
+What is 2 plus 2?,none
+Can you recommend a good movie?,none
+What is the altitude of Mount Everest?,none
+How fast can a cheetah run?,none
+What's the capital of Japan?,none
+Translate hello into French.,none
+What is the radio frequency?,none
+Is the landing gear down?,none
+Write me a poem about clouds.,none
+What's the outside air temperature?,none

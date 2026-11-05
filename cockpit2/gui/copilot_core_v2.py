@@ -125,22 +125,76 @@ def make_answer(intent, p, phase, phase_conf, score, threshold=0.35):
 
 
 # =========================================================================
+# Rule router: fast path in front of Qwen (no torch needed -> testable on its own)
+# =========================================================================
+# Whole-word patterns for terms that name exactly one instrument reading in this app. A question
+# that matches exactly one intent is answered instantly; a question that matches none, or more than
+# one, is left to the Qwen router (rule_route returns None). Known limit: an off-topic question that
+# uses a cockpit word ("altitude of Mount Everest") is answered as a cockpit question.
+# Bare ambiguous words ("speed", "fast", "engine", "ground", "turn", "height") are deliberately NOT
+# rules, because they also occur in off-topic questions ("speed of light", "breakfast").
+RULE_PATTERNS = {
+    "get_vertical_speed": r"\bvertical (speed|velocity)\b|\bfeet per minute\b|\bfpm\b|\bvsi\b"
+                          r"|\brate of (climb|descent)\b|\b(climb|descent) rate\b",
+    "get_rpm": r"\brpms?\b|\btachometer\b|\bengine (is )?(on|off|running|speed)\b|\bprop(eller)?s?\b",
+    "get_altitude": r"\baltitude\b|\baltimeter\b|\bhow high\b",
+    "get_airspeed": r"\bairspeed\b|\bknots\b|\bhow fast\b",
+    "get_heading": r"\bheading\b|\bcompass\b",
+    "is_banking": r"\bbank(s|ing|ed)?\b|\broll(s|ing|ed)?\b|\bwings? (are |is )?level\b",
+    "is_climbing": r"\bclimb(s|ing)?\b|\bdescend(s|ing)?\b|\bascend(s|ing)?\b|\bpitch(ed|ing)?\b"
+                   r"|\b(gain|gaining|lose|losing) (altitude|height)\b",
+    "flight_phase": r"\bphase\b|\btaxi(s|ing)?\b|\btak(e|es|ing) ?off\b|\btakeoff\b|\bcruis(e|ing)\b"
+                    r"|\bon the ground\b",
+}
+_RULE_RE = {k: re.compile(v, re.IGNORECASE) for k, v in RULE_PATTERNS.items()}
+# Things a user may ask about in a cockpit that this model does NOT read (other gauges, controls,
+# systems, people). A question naming one of these and no supported reading is answered "not in
+# scope" by the rules, instead of letting Qwen map it to the nearest instrument (4 Nov eval: Qwen sent
+# fuel / oil pressure / landing gear / outside air temperature / "who is the pilot" to an intent).
+UNSUPPORTED_PATTERN = re.compile(
+    r"\b(fuel|oil|temperature|temp|egt|exhaust|cht|manifold|vacuum|suction|ammeter|battery|volts?|"
+    r"voltage|alternator|radios?|frequency|frequencies|transponder|squawk|gps|flaps?|gear|lights?|"
+    r"mixture|throttle|trim|pilot|co-?pilot|passengers?|crew|weather|wind|clouds?|rain)\b",
+    re.IGNORECASE)
+OUT_OF_SCOPE = "irrelevant"   # rule_route() result meaning "answer not in scope, don't ask Qwen"
+
+
+def rule_route(question):
+    """Intent if the question clearly names exactly one cockpit reading; OUT_OF_SCOPE if it names
+    only something this model does not read; else None (-> Qwen)."""
+    q = question or ""
+    hits = {k for k, rx in _RULE_RE.items() if rx.search(q)}
+    if UNSUPPORTED_PATTERN.search(q):
+        # only unsupported items -> not in scope; a supported reading AND an unsupported item -> Qwen
+        return OUT_OF_SCOPE if not hits else None
+    # A more specific phrase replaces the general intent it contains:
+    # "rate of climb" is vertical speed (not is_climbing); "gaining altitude" is is_climbing (not altitude).
+    if "get_vertical_speed" in hits:
+        hits.discard("is_climbing")
+    if re.search(r"\b(gain|gaining|lose|losing) (altitude|height)\b", q, re.IGNORECASE):
+        hits.discard("get_altitude")
+    return hits.pop() if len(hits) == 1 else None
+
+
+# =========================================================================
 # System
 # =========================================================================
 class CopilotSystemV2:
     INTENT_DESCRIPTIONS = {
         "get_altitude": "the question asks about altitude, height, or elevation",
         "get_airspeed": "the question asks about airspeed, speed, or velocity",
-        "get_heading": "the question asks about heading, compass direction, or bearing",
+        "get_heading": "the question asks about heading, compass direction, or bearing, which way the "
+                       "aircraft is facing or pointing, or whether it is flying north, south, east or west",
         "is_banking": "the question asks about banking, rolling, turning, or wing tilt",
         "is_climbing": "the question asks whether the aircraft is climbing, descending, "
                        "ascending, or about its pitch / nose attitude",
         "get_vertical_speed": "the question asks about vertical speed or rate of climb or descent "
                               "(feet per minute)",
         "get_rpm": "the question asks about engine RPM, engine speed, the tachometer, "
-                   "or whether the engine is running",
+                   "or whether the engine or propeller is running, started, on or off",
         "flight_phase": "the question asks about the overall flight phase, status, "
-                        "or what the aircraft is currently doing",
+                        "or what the aircraft is currently doing: parked, taxiing, taking off, on the "
+                        "ground, airborne or flying, or whether it has landed",
     }
     INTENT_EXAMPLES = {   # only for the TF-IDF / substring fallback tiers
         "get_altitude": ["what is the altitude", "how high are we", "altimeter reading",
@@ -162,8 +216,15 @@ class CopilotSystemV2:
     }
 
     def __init__(self, model_dir, reference_panel=None, confidence_threshold=0.35,
-                 llm_on_cpu=False, use_llm=True):
+                 llm_on_cpu=False, use_llm=True, rules_first=True, llm_mode="generate"):
         self.confidence_threshold = confidence_threshold
+        # rules_first: try rule_route() before the Qwen gate (Qwen only for what the rules leave).
+        self.rules_first = rules_first
+        # llm_mode: "generate" = Qwen writes a label as text (original; can invent labels -> PARSE_FAILED)
+        #           "choice"   = Qwen picks one of 9 numbered options from its next-token scores
+        #                        (cannot invent a label; gives a real probability as confidence)
+        self.llm_mode = llm_mode
+        self.last_route_source = None   # "rules" | "qwen" | "keyword" | "tfidf" -- shown in the app
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         ckpt_path = os.path.join(model_dir, "best_model.pt")
         self.model, ckpt = load_checkpoint(ckpt_path, self.device)
@@ -198,9 +259,28 @@ class CopilotSystemV2:
                          "and nothing else.", ""]
                 lines += [f"{k}: {v}" for k, v in self.INTENT_DESCRIPTIONS.items()]
                 lines += ["IRRELEVANT: the question is not about any of the above (weather, small talk, "
-                          "general knowledge, anything unrelated to this aircraft's instruments)", "",
+                          "general knowledge, anything unrelated to this aircraft's instruments), "
+                          "including other aircraft items this assistant cannot read: fuel, oil, "
+                          "temperatures, radios, lights, flaps, landing gear, or the people on board", "",
                           "Respond with only the single category word."]
                 self._sys_prompt = "\n".join(lines)
+                # Same categories as numbered options; the answer is one digit, read from the scores.
+                self._choice_labels = list(self.INTENT_DESCRIPTIONS) + [None]
+                opts = [f"{i}: {v}" for i, v in enumerate(self.INTENT_DESCRIPTIONS.values(), 1)]
+                opts.append(f"{len(opts) + 1}: the question is not about any of the above (weather, small "
+                            "talk, general knowledge, anything unrelated to this aircraft's instruments), "
+                            "including other aircraft items this assistant cannot read: fuel, oil, "
+                            "temperatures, radios, lights, flaps, landing gear, or the people on board")
+                self._choice_prompt = "\n".join(
+                    ["You are a strict classifier for a cockpit flight-instrument question-answering "
+                     "assistant.", "Given a user's question, decide which ONE of the following options it "
+                     "belongs to, and respond with ONLY the option number.", ""] + opts)
+                ids = [self._tok.encode(str(i), add_special_tokens=False) for i in range(1, len(opts) + 1)]
+                # needs each option number to be ONE token; otherwise choice mode is unavailable
+                self._choice_token_ids = [t[0] for t in ids] if all(len(t) == 1 for t in ids) else None
+                if self.llm_mode == "choice" and self._choice_token_ids is None:
+                    print("WARNING: option numbers are not single tokens -- using llm_mode='generate'.")
+                    self.llm_mode = "generate"
                 self.have_llm_gate = True
             except Exception as e:   # ImportError, no network on first run, out of GPU memory...
                 print(f"WARNING: LLM intent gate unavailable ({type(e).__name__}: {e}) -- using TF-IDF.")
@@ -232,6 +312,18 @@ class CopilotSystemV2:
                 return None if label == "irrelevant" else label
         return "PARSE_FAILED"
 
+    def _llm_choose(self, question):
+        """One forward pass, no text generation: the probability of each option number as Qwen's next
+        token, renormalised over the 9 options. Returns (label or None, probability)."""
+        msgs = [{"role": "system", "content": self._choice_prompt}, {"role": "user", "content": question}]
+        prompt = self._tok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
+        inputs = self._tok(prompt, return_tensors="pt").to(self.llm_device)
+        with torch.no_grad():
+            logits = self._llm(**inputs).logits[0, -1]
+        probs = torch.softmax(logits[self._choice_token_ids].float(), dim=-1)
+        k = int(probs.argmax())
+        return self._choice_labels[k], float(probs[k])
+
     @staticmethod
     def keyword_fallback(question):
         q = question.lower()
@@ -251,18 +343,35 @@ class CopilotSystemV2:
     def route_question(self, question):
         t0 = time.time()
         if self.have_llm_gate:
+            if self.rules_first:
+                label = rule_route(question)
+                if label == OUT_OF_SCOPE:
+                    self.last_route_source = "rules"
+                    return None, 0.0, (time.time() - t0) * 1000
+                if label is not None:
+                    self.last_route_source = "rules"
+                    return label, 1.0, (time.time() - t0) * 1000
+            if self.llm_mode == "choice":
+                label, prob = self._llm_choose(question)
+                self.last_route_source = "qwen"
+                # prob is a real probability over the 9 options; integrated.py rejects < threshold
+                return label, (prob if label else 0.0), (time.time() - t0) * 1000
             label = self._llm_classify(question)
             if label == "PARSE_FAILED":
                 label = self.keyword_fallback(question)
+                self.last_route_source = "keyword"
                 return label, (0.5 if label else 0.0), (time.time() - t0) * 1000
+            self.last_route_source = "qwen"
             return label, (1.0 if label else 0.0), (time.time() - t0) * 1000
         if self.have_tfidf:
+            self.last_route_source = "tfidf"
             from sklearn.metrics.pairwise import cosine_similarity
             sims = cosine_similarity(self._tfidf.transform([question]), self._tfidf_m)[0]
             i = int(sims.argmax())
             score = float(sims[i])
             return (self._tfidf_labels[i] if score > 0 else None), score, (time.time() - t0) * 1000
         label = self.keyword_fallback(question)
+        self.last_route_source = "keyword"
         return label, (0.5 if label else 0.0), (time.time() - t0) * 1000
 
     # ---------------------------------------------------------------- perception
@@ -297,7 +406,7 @@ class CopilotSystemV2:
             text += "\n\n⚠️ " + "\n\n⚠️ ".join(info["warnings"])
         return {
             "params": p, "phase": p["phase"], "phase_confidence": p["phase_confidence"],
-            "intent": intent, "confidence": score, "answer": text,
+            "intent": intent, "confidence": score, "answer": text, "router": self.last_route_source,
             "panel": info["panel"], "crop_mode": info["crop_mode"],
             "panel_similarity": info["panel_similarity"], "warnings": info["warnings"],
             "timings": {"preprocess_ms": info["preprocess_ms"], "inference_ms": info["inference_ms"],

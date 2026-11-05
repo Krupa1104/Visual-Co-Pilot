@@ -20,7 +20,9 @@ def router():
     from copilot_core_v2 import CopilotSystemV2
     if not os.path.exists(os.path.join(MODEL_DIR, "best_model.pt")):
         pytest.skip("cockpit model not found")
-    c = CopilotSystemV2(model_dir=MODEL_DIR, reference_panel=REFERENCE_PANEL, use_llm=True)
+    # rules_first=False: this file tests Qwen itself, so the rule fast path is switched off.
+    c = CopilotSystemV2(model_dir=MODEL_DIR, reference_panel=REFERENCE_PANEL, use_llm=True,
+                         rules_first=False)
     if not c.have_llm_gate:
         pytest.skip("Qwen could not be loaded (see terminal warning)")
     return c

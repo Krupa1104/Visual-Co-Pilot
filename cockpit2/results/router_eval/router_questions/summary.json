@@ -1,0 +1,50 @@
+{
+  "keyword": {
+    "accuracy": 0.6746987951807228,
+    "correct": 56,
+    "of": 83,
+    "in_scope_correct": 43,
+    "in_scope": 67,
+    "off_topic_rejected": 13,
+    "off_topic": 16,
+    "median_ms": 0.034899989259429276,
+    "mean_ms": 0.03648795175551246,
+    "max_ms": 0.0771000050008297
+  },
+  "rules": {
+    "answered": 50,
+    "of": 83,
+    "correct_when_answered": 47
+  },
+  "qwen": {
+    "accuracy": 0.7710843373493976,
+    "correct": 64,
+    "of": 83,
+    "in_scope_correct": 52,
+    "in_scope": 67,
+    "off_topic_rejected": 12,
+    "off_topic": 16,
+    "median_ms": 4717.001900004107,
+    "mean_ms": 5070.852481926468,
+    "max_ms": 14237.293300000601
+  },
+  "rules_then_qwen": {
+    "accuracy": 0.8433734939759037,
+    "correct": 70,
+    "of": 83,
+    "in_scope_correct": 56,
+    "in_scope": 67,
+    "off_topic_rejected": 14,
+    "off_topic": 16,
+    "median_ms": 0.09780000254977494,
+    "mean_ms": 1978.5904927710098,
+    "max_ms": 8140.846099995542,
+    "answered_by_rules": 50
+  },
+  "decision": "adopt rules_then_qwen",
+  "setup": {
+    "torch": "2.15.0+cpu",
+    "device": "cpu",
+    "questions": "C:\\Users\\krupa\\sem6\\capstone\\datasets\\vqa-demo\\cockpit2\\process\\router_questions.csv"
+  }
+}

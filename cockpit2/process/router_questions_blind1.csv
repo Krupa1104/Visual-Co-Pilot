@@ -1,0 +1,61 @@
+question,expected
+What's our current altitude?,get_altitude
+How high up are we right now?,get_altitude
+Read the altimeter for me,get_altitude
+what height is the plane flying at,get_altitude
+Are we above 5000 feet?,get_altitude
+check how high we are,get_altitude
+How fast are we flying?,get_airspeed
+What is the current airspeed in knots?,get_airspeed
+check airspeed indicator,get_airspeed
+Are we flying above 100 knots right now?,get_airspeed
+tell me the speed,get_airspeed
+whats our speed in the air,get_airspeed
+What direction are we heading?,get_heading
+Which way is the plane facing?,get_heading
+Read the compass heading,get_heading
+are we going north or south,get_heading
+What degree heading does the directional gyro show?,get_heading
+whats our current bearing,get_heading
+Are we banking right now?,is_banking
+Is the plane turning left or right?,is_banking
+are the wings level,is_banking
+Which side is the aircraft rolling towards?,is_banking
+Is the plane tilted to one side?,is_banking
+check if we are in a bank,is_banking
+Are we climbing or descending?,is_climbing
+Is the nose pitched up or down?,is_climbing
+are we gaining or losing altitude,is_climbing
+Is the airplane currently level or climbing?,is_climbing
+are we pitched up,is_climbing
+Is the aircraft going down right now?,is_climbing
+What is our rate of climb?,get_vertical_speed
+How fast are we descending in feet per minute?,get_vertical_speed
+Read the VSI gauge,get_vertical_speed
+whats the vertical speed indicator showing,get_vertical_speed
+How many feet per minute are we gaining?,get_vertical_speed
+tell me the vertical speed,get_vertical_speed
+What is the engine RPM?,get_rpm
+Is the engine running right now?,get_rpm
+check the tachometer,get_rpm
+how fast is the prop turning,get_rpm
+What RPM are we currently pulling?,get_rpm
+is the motor turned on,get_rpm
+What phase of flight are we in?,flight_phase
+Are we still on the ground or in the air?,flight_phase
+Are we taxiing right now?,flight_phase
+is the plane parked,flight_phase
+What is the overall aircraft status?,flight_phase
+Are we in level flight or taking off?,flight_phase
+How much fuel do we have left?,none
+Is the flap lever extended?,none
+What is the oil pressure reading?,none
+Are the landing lights turned on?,none
+whats the frequency set on NAV1,none
+Is the parking brake set?,none
+What is the capital of France?,none
+Can you write a poem about airplanes?,none
+What's the weather forecast for London tomorrow?,none
+who won the last world cup,none
+How do I make a chocolate cake?,none
+Solve 25 times 4,none

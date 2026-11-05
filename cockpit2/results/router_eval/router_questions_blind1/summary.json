@@ -1,0 +1,50 @@
+{
+  "keyword": {
+    "accuracy": 0.8166666666666667,
+    "correct": 49,
+    "of": 60,
+    "in_scope_correct": 38,
+    "in_scope": 48,
+    "off_topic_rejected": 11,
+    "off_topic": 12,
+    "median_ms": 0.02015000063693151,
+    "mean_ms": 0.02126333347405307,
+    "max_ms": 0.0501000031363219
+  },
+  "rules": {
+    "answered": 38,
+    "of": 60,
+    "correct_when_answered": 37
+  },
+  "qwen": {
+    "accuracy": 0.85,
+    "correct": 51,
+    "of": 60,
+    "in_scope_correct": 42,
+    "in_scope": 48,
+    "off_topic_rejected": 9,
+    "off_topic": 12,
+    "median_ms": 3570.070250003482,
+    "mean_ms": 4396.124931667146,
+    "max_ms": 8446.321800001897
+  },
+  "rules_then_qwen": {
+    "accuracy": 0.9166666666666666,
+    "correct": 55,
+    "of": 60,
+    "in_scope_correct": 43,
+    "in_scope": 48,
+    "off_topic_rejected": 12,
+    "off_topic": 12,
+    "median_ms": 0.0790999984019436,
+    "mean_ms": 1527.3715133347043,
+    "max_ms": 8084.377200008021,
+    "answered_by_rules": 38
+  },
+  "decision": "adopt rules_then_qwen",
+  "setup": {
+    "torch": "2.15.0+cpu",
+    "device": "cpu",
+    "questions": "cockpit2\\process\\router_questions_blind.csv"
+  }
+}

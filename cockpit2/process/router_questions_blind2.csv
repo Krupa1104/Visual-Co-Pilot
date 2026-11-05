@@ -1,0 +1,61 @@
+question,expected
+What height are we flying at right now?,get_altitude
+How many feet above sea level are we?,get_altitude
+what does the altimeter say,get_altitude
+Current altitude please,get_altitude
+Are we currently above 5000 feet?,get_altitude
+read the altimeter indicator,get_altitude
+How fast are we flying?,get_airspeed
+What's our current indicated airspeed in knots?,get_airspeed
+is the plane moving faster than 100 knots,get_airspeed
+check the airspeed gauge,get_airspeed
+What speed is shown on the asi?,get_airspeed
+How many knots are we doing right now,get_airspeed
+Which direction are we heading?,get_heading
+What compass heading is the aircraft on?,get_heading
+are we flying north or south,get_heading
+tell me our current heading degrees,get_heading
+What does the directional gyro read?,get_heading
+where are we pointing,get_heading
+Is the plane banking to the left or right?,is_banking
+Are we turning right now?,is_banking
+check if wings are level,is_banking
+What is our bank angle?,is_banking
+are we rolling to the side,is_banking
+Is the attitude indicator showing a bank?,is_banking
+Is the nose pitched up or down?,is_climbing
+Are we climbing or descending?,is_climbing
+is the aircraft pitched up,is_climbing
+Are we in a dive or a climb right now?,is_climbing
+tell me if we are losing or gaining pitch attitude,is_climbing
+Are the wings level pitch wise?,is_climbing
+What is our rate of climb in feet per minute?,get_vertical_speed
+How fast are we losing altitude per minute?,get_vertical_speed
+check the vsi gauge reading,get_vertical_speed
+What does the vertical speed indicator show?,get_vertical_speed
+Are we dropping at more than 500 fpm?,get_vertical_speed
+read the climb rate dial,get_vertical_speed
+What is the current engine RPM?,get_rpm
+Is the engine actually running?,get_rpm
+check tachometer,get_rpm
+Are we spinning the prop at full power?,get_rpm
+how many revs per minute on the tach,get_rpm
+Is engine power on?,get_rpm
+What flight phase are we currently in?,flight_phase
+Are we still on the runway taking off or already in the air?,flight_phase
+Are we parked at the gate or taxiing?,flight_phase
+What is the plane doing overall right now?,flight_phase
+is this aircraft in level cruise or climbing out,flight_phase
+Are we currently taxiing on the ground?,flight_phase
+How much fuel is left in the tanks?,none
+What is the oil temperature reading?,none
+Is the flap handle deployed to 10 degrees?,none
+Where is our destination airport on the flight plan?,none
+What frequency is set on NAV1 radio?,none
+Is the parking brake pulled?,none
+What is the capital of France?,none
+Can you give me a recipe for chocolate chip cookies?,none
+Who won the last Super Bowl?,none
+How do I write a python function to sort a list?,none
+What is the weather like in Seattle today?,none
+Tell me a joke about airplanes,none
