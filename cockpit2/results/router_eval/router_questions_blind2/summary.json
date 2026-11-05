@@ -1,0 +1,76 @@
+{
+  "keyword": {
+    "accuracy": 0.8,
+    "correct": 48,
+    "of": 60,
+    "in_scope_correct": 36,
+    "in_scope": 48,
+    "off_topic_rejected": 12,
+    "off_topic": 12,
+    "median_ms": 0.032999996619764715,
+    "mean_ms": 0.034376666735624894,
+    "max_ms": 0.05610000516753644
+  },
+  "rules": {
+    "answered": 38,
+    "of": 60,
+    "correct_when_answered": 38
+  },
+  "qwen": {
+    "accuracy": 0.8166666666666667,
+    "correct": 49,
+    "of": 60,
+    "in_scope_correct": 38,
+    "in_scope": 48,
+    "off_topic_rejected": 11,
+    "off_topic": 12,
+    "median_ms": 4730.313350002689,
+    "mean_ms": 5436.344886667696,
+    "max_ms": 14069.697900005849
+  },
+  "rules_then_qwen": {
+    "accuracy": 0.8666666666666667,
+    "correct": 52,
+    "of": 60,
+    "in_scope_correct": 41,
+    "in_scope": 48,
+    "off_topic_rejected": 11,
+    "off_topic": 12,
+    "median_ms": 0.10364999616285786,
+    "mean_ms": 2014.8947833343602,
+    "max_ms": 13686.401800005115,
+    "answered_by_rules": 38
+  },
+  "qwen_choice": {
+    "accuracy": 0.5166666666666667,
+    "correct": 31,
+    "of": 60,
+    "in_scope_correct": 27,
+    "in_scope": 48,
+    "off_topic_rejected": 4,
+    "off_topic": 12,
+    "median_ms": 3736.05834999762,
+    "mean_ms": 4638.500603334251,
+    "max_ms": 13575.758799997857
+  },
+  "rules_then_qwen_choice": {
+    "accuracy": 0.8,
+    "correct": 48,
+    "of": 60,
+    "in_scope_correct": 41,
+    "in_scope": 48,
+    "off_topic_rejected": 7,
+    "off_topic": 12,
+    "median_ms": 0.10364999616285786,
+    "mean_ms": 1666.4384766675842,
+    "max_ms": 12643.246399995405
+  },
+  "decision": "adopt rules_then_qwen",
+  "decision_llm_mode": "keep generate",
+  "setup": {
+    "torch": "2.15.0+cpu",
+    "torch_threads": 14,
+    "device": "cpu",
+    "questions": "cockpit2\\process\\router_questions_blind2.csv"
+  }
+}

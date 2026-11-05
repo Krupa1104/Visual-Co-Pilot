@@ -1,0 +1,61 @@
+question,expected,keyword,keyword_ms,rules,rules_ms,qwen,qwen_ms,rules_then_qwen,rules_then_qwen_ms,rules_then_qwen_used
+What's our current altitude?,get_altitude,get_altitude,0.018700011423788965,get_altitude,0.21859999105799943,get_altitude,3303.9099000015995,get_altitude,0.21859999105799943,rules
+How high up are we right now?,get_altitude,get_altitude,0.01990000600926578,get_altitude,0.04919999628327787,get_altitude,3258.2662999921013,get_altitude,0.04919999628327787,rules
+Read the altimeter for me,get_altitude,get_altitude,0.01589999010320753,get_altitude,0.0408000050811097,get_altitude,6177.865600009682,get_altitude,0.0408000050811097,rules
+what height is the plane flying at,get_altitude,get_altitude,0.0281000102404505,(deferred),0.08689999231137335,get_altitude,7940.356199993403,get_altitude,7940.443099985714,qwen
+Are we above 5000 feet?,get_altitude,none,0.02510000194888562,(deferred),0.049300011596642435,get_altitude,8084.327899996424,get_altitude,8084.377200008021,qwen
+check how high we are,get_altitude,get_altitude,0.0501000031363219,get_altitude,0.07239999831654131,get_altitude,7959.160099999281,get_altitude,0.07239999831654131,rules
+How fast are we flying?,get_airspeed,get_airspeed,0.040700004319660366,get_airspeed,0.1362000039080158,get_airspeed,7469.492699994589,get_airspeed,0.1362000039080158,rules
+What is the current airspeed in knots?,get_airspeed,get_airspeed,0.03539999306667596,get_airspeed,0.09309999586548656,get_airspeed,8428.563699999359,get_airspeed,0.09309999586548656,rules
+check airspeed indicator,get_airspeed,get_airspeed,0.02099999983329326,get_airspeed,0.048999994760379195,get_airspeed,8436.992800008738,get_airspeed,0.048999994760379195,rules
+Are we flying above 100 knots right now?,get_airspeed,get_airspeed,0.04630000330507755,get_airspeed,0.1238999975612387,get_airspeed,8446.321800001897,get_airspeed,0.1238999975612387,rules
+tell me the speed,get_airspeed,get_airspeed,0.022100008209235966,(deferred),0.04230000195093453,get_airspeed,3463.4796000027563,get_airspeed,3463.5219000047073,qwen
+whats our speed in the air,get_airspeed,get_airspeed,0.016200006939470768,(deferred),0.041700011934153736,get_airspeed,3356.2576999975136,get_airspeed,3356.2994000094477,qwen
+What direction are we heading?,get_heading,get_heading,0.0202999945031479,get_heading,0.043400010326877236,get_heading,2931.957599997986,get_heading,0.043400010326877236,rules
+Which way is the plane facing?,get_heading,none,0.020000006770715117,(deferred),0.039699996705166996,is_banking,3210.483699993347,is_banking,3210.523399990052,qwen
+Read the compass heading,get_heading,get_heading,0.01780000457074493,get_heading,0.039700011257082224,get_heading,2936.762900004396,get_heading,0.039700011257082224,rules
+are we going north or south,get_heading,none,0.017300000763498247,(deferred),0.03460000152699649,is_banking,3220.8091000065906,is_banking,3220.8437000081176,qwen
+What degree heading does the directional gyro show?,get_heading,get_heading,0.019800005247816443,get_heading,0.051399998483248055,get_heading,3068.7554000032833,get_heading,0.051399998483248055,rules
+whats our current bearing,get_heading,get_heading,0.015900004655122757,(deferred),0.03609999839682132,get_heading,3063.2582000107504,get_heading,3063.2943000091473,qwen
+Are we banking right now?,is_banking,is_banking,0.018399994587525725,is_banking,0.035900011425837874,is_banking,3356.141700001899,is_banking,0.035900011425837874,rules
+Is the plane turning left or right?,is_banking,is_banking,0.014199991710484028,(deferred),0.03329999162815511,is_banking,3382.7024000056554,is_banking,3382.7356999972835,qwen
+are the wings level,is_banking,is_banking,0.013499986380338669,is_banking,0.027400004910305142,is_banking,3385.3354999882868,is_banking,0.027400004910305142,rules
+Which side is the aircraft rolling towards?,is_banking,is_banking,0.02059999678749591,is_banking,0.04400000034365803,is_banking,3476.727299988852,is_banking,0.04400000034365803,rules
+Is the plane tilted to one side?,is_banking,is_banking,0.020699997548945248,(deferred),0.04100000660400838,is_banking,3430.118300006143,is_banking,3430.159300012747,qwen
+check if we are in a bank,is_banking,is_banking,0.0202999945031479,is_banking,0.04540001100394875,is_banking,3432.6997000025585,is_banking,0.04540001100394875,rules
+Are we climbing or descending?,is_climbing,is_climbing,0.020399995264597237,is_climbing,0.03890000516548753,is_climbing,3683.2943999907,is_climbing,0.03890000516548753,rules
+Is the nose pitched up or down?,is_climbing,is_climbing,0.015900004655122757,(deferred),0.03950000973418355,is_banking,3482.964599999832,is_banking,3483.004100009566,qwen
+are we gaining or losing altitude,is_climbing,get_altitude,0.016599995433352888,is_climbing,0.03960001049563289,get_altitude,3496.117000002414,is_climbing,0.03960001049563289,rules
+Is the airplane currently level or climbing?,is_climbing,is_climbing,0.021800005924887955,is_climbing,0.044899992644786835,is_climbing,3773.8316000031773,is_climbing,0.044899992644786835,rules
+are we pitched up,is_climbing,is_climbing,0.02160000440198928,(deferred),0.03579999611247331,is_climbing,3763.9391999982763,is_climbing,3763.974999994389,qwen
+Is the aircraft going down right now?,is_climbing,none,0.01930000144056976,(deferred),0.04350001108832657,is_climbing,3772.7058000018587,is_climbing,3772.749300012947,qwen
+What is our rate of climb?,get_vertical_speed,get_vertical_speed,0.011199997970834374,get_vertical_speed,0.04299999272916466,get_vertical_speed,4043.9865999942413,get_vertical_speed,0.04299999272916466,rules
+How fast are we descending in feet per minute?,get_vertical_speed,get_vertical_speed,0.03840000135824084,(deferred),0.09580000187270343,get_vertical_speed,8027.455599993118,get_vertical_speed,8027.551399994991,qwen
+Read the VSI gauge,get_vertical_speed,get_vertical_speed,0.03359999391250312,get_vertical_speed,0.08579999848734587,get_vertical_speed,7925.988699993468,get_vertical_speed,0.08579999848734587,rules
+whats the vertical speed indicator showing,get_vertical_speed,get_vertical_speed,0.020400009816512465,get_vertical_speed,0.1272999943466857,get_vertical_speed,7919.741999998223,get_vertical_speed,0.1272999943466857,rules
+How many feet per minute are we gaining?,get_vertical_speed,get_vertical_speed,0.022499996703118086,get_vertical_speed,0.09760000102687627,get_vertical_speed,7882.801800005836,get_vertical_speed,0.09760000102687627,rules
+tell me the vertical speed,get_vertical_speed,get_vertical_speed,0.03360000846441835,get_vertical_speed,0.08589999924879521,get_vertical_speed,4708.6023000010755,get_vertical_speed,0.08589999924879521,rules
+What is the engine RPM?,get_rpm,get_rpm,0.01610000617802143,get_rpm,0.04100000660400838,get_rpm,3256.729600005201,get_rpm,0.04100000660400838,rules
+Is the engine running right now?,get_rpm,get_rpm,0.011099997209385037,get_rpm,0.03359999391250312,is_climbing,3520.8216000028187,get_rpm,0.03359999391250312,rules
+check the tachometer,get_rpm,get_rpm,0.011199997970834374,get_rpm,0.031199990189634264,get_rpm,3322.097299998859,get_rpm,0.031199990189634264,rules
+how fast is the prop turning,get_rpm,get_airspeed,0.015099998563528061,get_airspeed,0.040700004319660366,get_rpm,3359.284200007096,get_airspeed,0.040700004319660366,rules
+What RPM are we currently pulling?,get_rpm,get_rpm,0.015199999324977398,get_rpm,0.04369999805931002,get_rpm,3395.211900002323,get_rpm,0.04369999805931002,rules
+is the motor turned on,get_rpm,is_banking,0.018700011423788965,(deferred),0.03710000601131469,is_climbing,3640.1241999992635,is_climbing,3640.161300005275,qwen
+What phase of flight are we in?,flight_phase,flight_phase,0.013899989426136017,flight_phase,0.031200004741549492,flight_phase,3238.9347000134876,flight_phase,0.031200004741549492,rules
+Are we still on the ground or in the air?,flight_phase,flight_phase,0.021799991372972727,flight_phase,0.05389998841565102,flight_phase,3541.1301999993157,flight_phase,0.05389998841565102,rules
+Are we taxiing right now?,flight_phase,none,0.01780000457074493,flight_phase,0.03720000677276403,flight_phase,3286.206000004313,flight_phase,0.03720000677276403,rules
+is the plane parked,flight_phase,none,0.01579998934175819,(deferred),0.02950000634882599,flight_phase,3274.025899998378,flight_phase,3274.055400004727,qwen
+What is the overall aircraft status?,flight_phase,flight_phase,0.0236999912885949,(deferred),0.04509999416768551,flight_phase,3310.212099997443,flight_phase,3310.257199991611,qwen
+Are we in level flight or taking off?,flight_phase,none,0.019500002963468432,flight_phase,0.0467000063508749,flight_phase,3343.862199995783,flight_phase,0.0467000063508749,rules
+How much fuel do we have left?,none,none,0.0202999945031479,none,0.028599999495781958,none,3809.555299987551,none,0.028599999495781958,rules
+Is the flap lever extended?,none,none,0.02160000440198928,none,0.030700000934302807,is_climbing,3789.7653999971226,none,0.030700000934302807,rules
+What is the oil pressure reading?,none,none,0.019000013708136976,none,0.031400006264448166,get_rpm,3569.085900002392,none,0.031400006264448166,rules
+Are the landing lights turned on?,none,is_banking,0.02130000211764127,none,0.0337999954354018,none,3777.860400005011,none,0.0337999954354018,rules
+whats the frequency set on NAV1,none,none,0.024499997380189598,none,0.032400013878941536,get_rpm,3571.0546000045724,none,0.032400013878941536,rules
+Is the parking brake set?,none,none,0.022299995180219412,(deferred),0.03470000228844583,none,3874.397499996121,none,3874.4321999984095,qwen
+What is the capital of France?,none,none,0.013699987903237343,(deferred),0.031200004741549492,none,3805.2183000108926,none,3805.249500015634,qwen
+Can you write a poem about airplanes?,none,none,0.014300007023848593,(deferred),0.033199990866705775,none,3847.422299993923,none,3847.4554999847896,qwen
+What's the weather forecast for London tomorrow?,none,none,0.023500004317611456,none,0.037999998312443495,none,3843.4262000082526,none,0.037999998312443495,rules
+who won the last world cup,none,none,0.02269999822601676,(deferred),0.044200001866556704,none,3883.0033000122057,none,3883.0475000140723,qwen
+How do I make a chocolate cake?,none,none,0.022099993657320738,(deferred),0.04389999958220869,none,3905.3984000056516,none,3905.442300005234,qwen
+Solve 25 times 4,none,none,0.016999998479150236,(deferred),0.03189999551977962,none,3900.492699991446,none,3900.5245999869658,qwen
