@@ -24,7 +24,7 @@ pytestmark = pytest.mark.slow
 FINAL_RADAR = os.path.join(REPO, "radar2")
 SPLITS = os.path.join(FINAL_RADAR, "data", "splits")
 PER_TYPE = 5
-LATENCY_TARGET_S = 10.0          # median per question, fixed 4 Nov 2026 (radar-eval decision rule)
+LATENCY_TARGET_S = 20.0          # median per question; NFR-2 revised 23 Nov 2026 (was 10 s with the fast mode)
 
 
 def radar_test_sample():

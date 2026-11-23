@@ -100,8 +100,8 @@ class RadarSystem:
         answer_index_path: Optional[str] = None,
         max_question_length: int = 60,
         enable_ocr: bool = True,
-        ocr_models: str = "mobile",
-        ocr_mode: str = "crops",
+        ocr_models: str = "medium",   # default since 23 Nov 2026 (v1.1-esa): accuracy mode
+        ocr_mode: str = "labels",
         ocr_crop_pad_x: float = 4.0,
         ocr_crop_pad_y: float = 1.5,
         # fraction treated as footer text

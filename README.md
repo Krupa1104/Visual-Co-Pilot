@@ -10,7 +10,7 @@ Guide: Dr Vandana M L.
 | Module | What it reads | Models | Details |
 |---|---|---|---|
 | Cockpit (`cockpit2/`) | Cessna 172 panel in FlightGear: altitude, airspeed, heading, pitch, roll, vertical speed, turn rate, engine RPM, flight phase | CockpitNetV2 (ResNet18 with regression and needle-angle heads) | [`cockpit2/README.md`](cockpit2/README.md) |
-| Radar (`radar2/`) | Synthetic ATC radar images: aircraft count, quadrant/position, altitude, heading, callsign | YOLOv5 aircraft detector, PaddleOCR for the aircraft labels (PP-OCRv5 mobile by default, PP-OCRv6 medium with `--radar_ocr_models medium`), radar VQA classifier for the remaining questions | `radar2/radar_system.py`, `radar2/scripts/radar_eval.py` |
+| Radar (`radar2/`) | Synthetic ATC radar images: aircraft count, quadrant/position, altitude, heading, callsign | YOLOv5 aircraft detector, PaddleOCR reading each aircraft label box (default medium models + `labels` mode since v1.1-esa; fast mode: `--radar_ocr_models mobile --radar_ocr_mode crops`), radar VQA classifier for the remaining questions | `radar2/radar_system.py`, `radar2/scripts/radar_eval.py` |
 
 How questions are answered:
 - Cockpit: rules first (a question that matches exactly one instrument by keywords), Qwen2.5-1.5B-Instruct
@@ -75,8 +75,9 @@ first time its card is opened.
 
 - The first cockpit question that the rules can't route downloads Qwen2.5-1.5B-Instruct from Hugging Face
   (about 3 GB, cached afterwards). `--cockpit_no_llm` skips Qwen (rules + TF-IDF only).
-- `--radar_ocr_models medium`: larger OCR models (slightly more accurate on altitude/heading, about 3x
-  slower; see section 5). `--radar_ocr_mode full`: OCR on the whole image instead of crops around aircraft.
+- Radar OCR (default since v1.1-esa: `--radar_ocr_models medium --radar_ocr_mode labels`, 267/300 = 89.0% on
+  seed-3 test questions, median 15.4 s). Fast mode: `--radar_ocr_models mobile --radar_ocr_mode crops`
+  (257/300 = 85.7%, median 5.8 s). `--radar_ocr_mode full`: OCR on the whole image (original).
 - `--cockpit_no_rules`: send every cockpit question to Qwen (for comparison only).
 - Paths can be changed with `--cockpit2_model_dir`, `--radar_base_dir`, `--radar_yolo_root`; see
   `python integrated.py --help`.

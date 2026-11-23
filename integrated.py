@@ -118,10 +118,11 @@ parser.add_argument(
     help="Local YOLOv5 repository."
 )
 parser.add_argument("--radar_yolo_conf", type=float, default=0.25)
-parser.add_argument("--radar_ocr_models", choices=["mobile", "medium"], default="mobile",
-                    help="radar OCR models: 'mobile' (fast, default since 4 Nov) or 'medium' (original)")
-parser.add_argument("--radar_ocr_mode", choices=["crops", "full", "labels"], default="crops",
-                    help="radar OCR area: 'crops' around detected aircraft (fast) or 'full' image (original)")
+parser.add_argument("--radar_ocr_models", choices=["mobile", "medium"], default="medium",
+                    help="radar OCR models: 'medium' (default since 23 Nov, more accurate) or 'mobile' (fast)")
+parser.add_argument("--radar_ocr_mode", choices=["crops", "full", "labels"], default="labels",
+                    help="radar OCR area: 'labels' = each YOLO label box (default since 23 Nov), "
+                         "'crops' around detected aircraft (fast mode), 'full' image (original)")
 parser.add_argument(
     "--radar_cnn_checkpoint",
     default=os.path.join("models", "vqa", "best.pt")
