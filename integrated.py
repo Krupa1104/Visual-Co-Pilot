@@ -120,7 +120,7 @@ parser.add_argument(
 parser.add_argument("--radar_yolo_conf", type=float, default=0.25)
 parser.add_argument("--radar_ocr_models", choices=["mobile", "medium"], default="mobile",
                     help="radar OCR models: 'mobile' (fast, default since 4 Nov) or 'medium' (original)")
-parser.add_argument("--radar_ocr_mode", choices=["crops", "full"], default="crops",
+parser.add_argument("--radar_ocr_mode", choices=["crops", "full", "labels"], default="crops",
                     help="radar OCR area: 'crops' around detected aircraft (fast) or 'full' image (original)")
 parser.add_argument(
     "--radar_cnn_checkpoint",

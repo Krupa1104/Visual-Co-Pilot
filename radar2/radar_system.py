@@ -144,8 +144,12 @@ class RadarSystem:
         #   ocr_models: "mobile" = PP-OCRv5_mobile det+rec, "medium" = PaddleOCR's default models
         #   ocr_mode:   "crops"  = OCR only the area around each detected aircraft (its label is drawn
         #                          next to it); "full" = whole image, then YOLO text-box crops if incomplete
-        if ocr_models not in ("mobile", "medium") or ocr_mode not in ("crops", "full"):
-            raise ValueError("ocr_models must be 'mobile'/'medium', ocr_mode 'crops'/'full'")
+        #               "labels" = (added 23 Nov 2026, accuracy mode) read each label box as ONE unit:
+        #                          YOLO class 1 finds the callsign line, the ALT and HDG lines under it are
+        #                          OCR'd in the same crop, then each label is matched one-to-one to an
+        #                          aircraft. Aircraft crops are used only for aircraft left without a label.
+        if ocr_models not in ("mobile", "medium") or ocr_mode not in ("crops", "full", "labels"):
+            raise ValueError("ocr_models must be 'mobile'/'medium', ocr_mode 'crops'/'full'/'labels'")
         self.ocr_models = ocr_models
         self.ocr_mode = ocr_mode
         self.ocr_crop_pad_x = float(ocr_crop_pad_x)
@@ -1221,34 +1225,24 @@ class RadarSystem:
 
             return extracted
 
+        # Accuracy path (ocr_mode="labels", 23 Nov 2026): one OCR crop per label box, found from the
+        # YOLO class-1 callsign box. Aircraft crops only if some aircraft got no readable label.
+        if self.ocr_mode == "labels" and detections:
+            ocr_items = self._ocr_label_blocks(image, run_paddle_ocr)
+            read = sum(1 for item in ocr_items if item["fields"].get("callsign"))
+            if read < len(detections):
+                print(f"[OCR] {read} readable labels for {len(detections)} aircraft; "
+                      f"adding aircraft crops as fallback.", flush=True)
+                ocr_items = ocr_items + self._ocr_aircraft_crops(image, run_paddle_ocr, detections)
+            self._last_ocr_items = ocr_items
+            confidences = [float(i["confidence"]) for i in ocr_items if i.get("confidence") is not None]
+            self._last_ocr_confidence = sum(confidences) / len(confidences) if confidences else None
+            return ocr_items
+
         # Fast path (ocr_mode="crops"): OCR only a window around each detected aircraft, where its
         # label box is drawn, and translate the results back to full-image coordinates.
         if self.ocr_mode == "crops" and detections:
-            height, width = image.shape[:2]
-            ocr_items = []
-            for detection in detections:
-                x1, y1, x2, y2 = detection["bbox"]
-                bw, bh = x2 - x1, y2 - y1
-                cx1 = max(0, int(x1 - self.ocr_crop_pad_x * bw))
-                cx2 = min(width, int(x2 + self.ocr_crop_pad_x * bw))
-                cy1 = max(0, int(y1 - self.ocr_crop_pad_y * bh))
-                cy2 = min(height, int(y2 + self.ocr_crop_pad_y * bh))
-                if cx2 <= cx1 or cy2 <= cy1:
-                    continue
-                for crop_item in self._merge_text_lines(run_paddle_ocr(image[cy1:cy2, cx1:cx2])):
-                    item = dict(crop_item)
-                    if not str(item.get("text", "")).strip():
-                        continue
-                    if item.get("polygon") is not None:
-                        item["polygon"] = [[float(px) + cx1, float(py) + cy1]
-                                           for px, py in item["polygon"]]
-                    if item.get("center") is not None:
-                        item["center"] = (float(item["center"][0]) + cx1,
-                                          float(item["center"][1]) + cy1)
-                    item["source"] = "aircraft_crop"
-                    ocr_items.append(item)
-            print(f"[OCR] Aircraft-crop PaddleOCR ({len(detections)} crops) extracted "
-                  f"{len(ocr_items)} text items.", flush=True)
+            ocr_items = self._ocr_aircraft_crops(image, run_paddle_ocr, detections)
             self._last_ocr_items = ocr_items
             confidences = [float(i["confidence"]) for i in ocr_items if i.get("confidence") is not None]
             self._last_ocr_confidence = sum(confidences) / len(confidences) if confidences else None
@@ -1394,6 +1388,249 @@ class RadarSystem:
 
         return ocr_items
 
+    def _ocr_aircraft_crops(self, image, run_paddle_ocr, detections):
+        """OCR a window around each detected aircraft (ocr_mode="crops"; moved here unchanged from
+        _ocr_text on 23 Nov 2026 so the "labels" mode can reuse it as its fallback)."""
+        height, width = image.shape[:2]
+        ocr_items = []
+        for detection in detections:
+            x1, y1, x2, y2 = detection["bbox"]
+            bw, bh = x2 - x1, y2 - y1
+            cx1 = max(0, int(x1 - self.ocr_crop_pad_x * bw))
+            cx2 = min(width, int(x2 + self.ocr_crop_pad_x * bw))
+            cy1 = max(0, int(y1 - self.ocr_crop_pad_y * bh))
+            cy2 = min(height, int(y2 + self.ocr_crop_pad_y * bh))
+            if cx2 <= cx1 or cy2 <= cy1:
+                continue
+            for crop_item in self._merge_text_lines(run_paddle_ocr(image[cy1:cy2, cx1:cx2])):
+                item = dict(crop_item)
+                if not str(item.get("text", "")).strip():
+                    continue
+                if item.get("polygon") is not None:
+                    item["polygon"] = [[float(px) + cx1, float(py) + cy1]
+                                       for px, py in item["polygon"]]
+                if item.get("center") is not None:
+                    item["center"] = (float(item["center"][0]) + cx1,
+                                      float(item["center"][1]) + cy1)
+                item["source"] = "aircraft_crop"
+                ocr_items.append(item)
+        print(f"[OCR] Aircraft-crop PaddleOCR ({len(detections)} crops) extracted "
+              f"{len(ocr_items)} text items.", flush=True)
+        return ocr_items
+
+    # ---- "labels" mode (23 Nov 2026) -------------------------------------------------------------
+    # Seed-2 eval (medium + crops): 13 of the 14 non-callsign misses were "could not locate a readable
+    # label" or "callsign read but ALT/HDG not attached". Cause: every OCR line (callsign, ALT, HDG)
+    # was attached to the nearest aircraft on its own, so one label's lines could be split between
+    # aircraft or dropped as ambiguous. Here the three lines of one label are read together.
+    LABEL_BOX_MIN_CONF = 0.25      # YOLO class-1 (callsign line) confidence; configured, not tuned
+    LABEL_OCR_UPSCALE = 2.0        # label text is ~14 px high; enlarge before OCR
+    # Label placement in the generator (generate_radar.draw_contact_label): label vertically centred on
+    # the aircraft, joined by a 32 px horizontal connector. Measured on 200 generated scenes (DejaVu Mono
+    # 20 px as a Consolas stand-in): aircraft-box centre -> nearest label text edge 31-48.5 px (median
+    # 39.5) = ~2.6 callsign-text heights; vertical offset <= 8.5 px. Values in text heights:
+    LABEL_GAP_TEXT_H = 2.6         # expected horizontal gap aircraft centre -> label text
+    LABEL_GAP_TOL_TEXT_H = 3.0     # allowed deviation from that gap
+    LABEL_DY_TOL_TEXT_H = 1.5      # allowed vertical offset aircraft centre <-> label centre
+    LABEL_PITCH_TEXT_H = 1.67      # callsign line centre -> label centre (one line pitch, 25 px / 15 px)
+
+    def _label_crop_rect(self, callsign_bbox, width, height):
+        """Window that holds the whole label, from the callsign line box. The generator draws a label
+        as three left-aligned lines (callsign / ALT nnnnn / HDG nnn), one line pitch (~1.7 text heights)
+        apart, and the ALT line is ~1.5x as wide as the callsign line."""
+        x1, y1, x2, y2 = callsign_bbox
+        h = max(8.0, float(y2 - y1))
+        w = max(h, float(x2 - x1))
+        return (max(0, int(x1 - 0.6 * h)), max(0, int(y1 - 0.6 * h)),
+                min(width, int(x1 + 2.2 * w + h)), min(height, int(y2 + 4.2 * h)))
+
+    @staticmethod
+    def _read_label_block(rows, callsign_bbox):
+        """Read callsign / altitude / heading from the OCR rows of ONE label crop (image coords).
+        The label's three lines are left-aligned with the callsign line and one pitch apart, so for
+        each line the row is taken that starts at the callsign's left edge and lies closest to where
+        that line should be. Rows of an overlapping neighbour label are ignored this way (first
+        version joined all rows below the callsign and read a neighbour's HDG in dense scenes).
+        ALT/HDG are read by keyword, else by position (OCR can garble 'ALT'/'HDG').
+        Returns (fields, used_rows)."""
+        x1, y1, x2, y2 = callsign_bbox
+        h = max(8.0, float(y2 - y1))
+        pitch = RadarSystem.LABEL_PITCH_TEXT_H * h
+        anchor_cy = (y1 + y2) / 2.0
+        cands = []
+        for r in rows:
+            poly = r.get("polygon")
+            if not poly or not str(r.get("text", "")).strip():
+                continue
+            left = min(p[0] for p in poly)
+            cy = sum(p[1] for p in poly) / len(poly)
+            if abs(left - x1) <= 1.2 * h:
+                cands.append((cy, left, r))
+
+        def line(k):
+            expected = anchor_cy + k * pitch
+            near = [(abs(cy - expected) + abs(left - x1), r) for cy, left, r in cands
+                    if abs(cy - expected) <= 0.45 * pitch]
+            return min(near, key=lambda t: t[0])[1] if near else None
+
+        top, alt_row, hdg_row = line(0), line(1), line(2)
+        callsign = RadarSystem._parse_visible_label(str(top["text"]))["callsign"] if top else None
+        altitude = heading = None
+        if alt_row is not None:
+            text = str(alt_row["text"])
+            altitude = RadarSystem._parse_visible_label(text)["altitude"]
+            if altitude is None:
+                m = re.search(r"(\d{4,5})(?!.*\d)", text)
+                altitude = int(m.group(1)) if m else None
+            if altitude is not None and not 1000 <= altitude <= 60000:
+                altitude = None
+        if hdg_row is not None:
+            text = str(hdg_row["text"])
+            heading = RadarSystem._parse_visible_label(text)["heading"]
+            if heading is None:
+                m = re.search(r"(\d{1,3})\s*$", text.strip())
+                heading = int(m.group(1)) if m and int(m.group(1)) < 360 else None
+        used = [r for r in (top, alt_row, hdg_row) if r is not None]
+        return {"callsign": callsign, "altitude": altitude, "heading": heading}, used
+
+    def _ocr_label_blocks(self, image, run_paddle_ocr):
+        """One OCR crop per YOLO class-1 box (callsign line, recall 99.1% in reports/yolo_ocr_100)."""
+        height, width = image.shape[:2]
+        boxes = []
+        for det in getattr(self, "_last_text_detections", []):       # sorted by confidence
+            bx1, by1, bx2, by2 = det["bbox"]
+            cy = (by1 + by2) / 2.0
+            if det["confidence"] < self.LABEL_BOX_MIN_CONF:
+                continue
+            if not (self.EXCLUDE_TOP * height <= cy <= (1.0 - self.EXCLUDE_BOTTOM) * height):
+                continue
+            if any(self._box_iou(det["bbox"], b["bbox"]) >= 0.5 for b in boxes):
+                continue
+            boxes.append(det)
+
+        items = []
+        s = self.LABEL_OCR_UPSCALE
+        pad = 16
+        for det in boxes:
+            rx1, ry1, rx2, ry2 = self._label_crop_rect(det["bbox"], width, height)
+            if rx2 <= rx1 or ry2 <= ry1:
+                continue
+            crop = cv2.resize(image[ry1:ry2, rx1:rx2], None, fx=s, fy=s, interpolation=cv2.INTER_CUBIC)
+            crop = cv2.copyMakeBorder(crop, pad, pad, pad, pad, cv2.BORDER_REPLICATE)
+            rows = []
+            for r in self._merge_text_lines(run_paddle_ocr(crop)):
+                if not r.get("polygon"):
+                    continue
+                r = dict(r)
+                r["polygon"] = [[(float(px) - pad) / s + rx1, (float(py) - pad) / s + ry1]
+                                for px, py in r["polygon"]]
+                xs = [p[0] for p in r["polygon"]]
+                ys = [p[1] for p in r["polygon"]]
+                r["center"] = (sum(xs) / len(xs), sum(ys) / len(ys))
+                rows.append(r)
+            fields, used = self._read_label_block(rows, det["bbox"])
+            if not any(v is not None for v in fields.values()):
+                continue
+            # how well the callsign row sits on the YOLO box (used to settle duplicate readings)
+            anchor_err = float("inf")
+            if used and fields["callsign"]:
+                top = used[0]["polygon"]
+                anchor_err = (abs(min(p[0] for p in top) - det["bbox"][0])
+                              + abs(sum(p[1] for p in top) / len(top) - (det["bbox"][1] + det["bbox"][3]) / 2.0))
+            pts = [p for r in used for p in r["polygon"]] or \
+                [[det["bbox"][0], det["bbox"][1]], [det["bbox"][2], det["bbox"][3]]]
+            tx1, ty1 = min(p[0] for p in pts), min(p[1] for p in pts)
+            tx2, ty2 = max(p[0] for p in pts), max(p[1] for p in pts)
+            confs = [float(r.get("confidence", 0.0)) for r in used] or [float(det["confidence"])]
+            items.append({
+                "text": " ".join(str(r["text"]) for r in used),
+                "confidence": sum(confs) / len(confs),
+                "polygon": [[tx1, ty1], [tx2, ty1], [tx2, ty2], [tx1, ty2]],
+                "center": ((tx1 + tx2) / 2.0, (ty1 + ty2) / 2.0),
+                "text_bbox": (tx1, ty1, tx2, ty2),
+                "text_height": float(det["bbox"][3] - det["bbox"][1]),
+                "callsign_bbox": tuple(det["bbox"]),
+                "fields": fields,
+                "anchor_err": anchor_err,
+                "source": "label_block",
+            })
+        # Two label crops can read the same callsign when labels overlap; keep it only where the
+        # callsign row sits best on its YOLO box (the other crop keeps its ALT/HDG, without callsign).
+        best = {}
+        for item in items:
+            cs = item["fields"]["callsign"]
+            if cs and (cs not in best or item["anchor_err"] < best[cs]["anchor_err"]):
+                best[cs] = item
+        for item in items:
+            cs = item["fields"]["callsign"]
+            if cs and best[cs] is not item:
+                item["fields"] = dict(item["fields"], callsign=None)
+        print(f"[OCR] Label-block PaddleOCR: {len(boxes)} label boxes, "
+              f"{sum(1 for i in items if i['fields']['callsign'])} callsigns read.", flush=True)
+        return items
+
+    @staticmethod
+    def _box_iou(a, b):
+        ix = max(0.0, min(a[2], b[2]) - max(a[0], b[0]))
+        iy = max(0.0, min(a[3], b[3]) - max(a[1], b[1]))
+        inter = ix * iy
+        union = (a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - inter
+        return inter / union if union > 0 else 0.0
+
+    def _associate_label_blocks(self, detections, label_items, other_items, image_size):
+        """Label -> aircraft, one-to-one, best fit first. Fit = how well the aircraft sits where the
+        generator puts a label's aircraft: beside the label (not under it), at the connector distance,
+        level with the label's centre. Plain nearest-box distance was tried first and failed in dense
+        scenes, where another aircraft can sit right next to (or under) a neighbour's label.
+        Other OCR items (aircraft-crop fallback) may only fill aircraft that got no label, and are
+        dropped if their callsign was already read from a label."""
+        pairs = []
+        for li, item in enumerate(label_items):
+            h = max(8.0, item["text_height"])
+            tx1, _, tx2, _ = item["text_bbox"]
+            cs = item["callsign_bbox"]
+            label_cy = (cs[1] + cs[3]) / 2.0 + self.LABEL_PITCH_TEXT_H * h
+            for ai, det in enumerate(detections):
+                ax1, ay1, ax2, ay2 = det["bbox"]
+                acx, acy = (ax1 + ax2) / 2.0, (ay1 + ay2) / 2.0
+                if tx1 <= acx <= tx2:                       # aircraft under the label: not its owner
+                    continue
+                gap = tx1 - acx if acx < tx1 else acx - tx2
+                dgap = abs(gap - self.LABEL_GAP_TEXT_H * h)
+                dy = abs(acy - label_cy)
+                if dgap <= self.LABEL_GAP_TOL_TEXT_H * h and dy <= self.LABEL_DY_TOL_TEXT_H * h:
+                    pairs.append((dgap + dy, li, ai))
+        pairs.sort()
+        label_to_aircraft, taken = {}, set()
+        for gap, li, ai in pairs:
+            if li in label_to_aircraft or ai in taken:
+                continue
+            label_to_aircraft[li] = ai
+            taken.add(ai)
+
+        records = []
+        for li, item in enumerate(label_items):
+            f = item["fields"]
+            records.append({
+                "callsign": f.get("callsign"), "altitude": f.get("altitude"), "heading": f.get("heading"),
+                "confidence": float(item["confidence"]), "aircraft_index": label_to_aircraft.get(li),
+                "text": [item["text"]], "center": item["center"], "source": "label_block",
+            })
+
+        known = {r["callsign"] for r in records if r["callsign"]}
+        extra = []
+        if other_items and len(taken) < len(detections):
+            for rec in self._associate_ocr(detections, other_items, image_size):
+                ai = rec.get("aircraft_index")
+                if rec.get("callsign") in known or (ai is not None and ai in taken):
+                    continue
+                if ai is None and not rec.get("callsign"):
+                    continue
+                extra.append(rec)
+        print(f"[OCR] Label blocks: {len(records)} ({len(taken)} matched to aircraft); "
+              f"fallback records: {len(extra)}", flush=True)
+        return records + extra
+
     @staticmethod
     def _parse_visible_label(text):
 
@@ -1470,6 +1707,11 @@ class RadarSystem:
         image_size,
     ):
         width, height = image_size
+
+        label_items = [i for i in ocr_items if i.get("source") == "label_block"]
+        if label_items:
+            others = [i for i in ocr_items if i.get("source") != "label_block"]
+            return self._associate_label_blocks(detections, label_items, others, image_size)
 
         # One combined record per detected aircraft.
         associated_by_aircraft = {}

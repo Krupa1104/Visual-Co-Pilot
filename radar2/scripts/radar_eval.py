@@ -21,6 +21,7 @@ Run from the repo root (venv_final, plugged in):
   python radar2\scripts\radar_eval.py --n 20 --seed 2                       (app default: mobile + crops)
   python radar2\scripts\radar_eval.py --n 20 --seed 2 --ocr_models medium     (accuracy mode)
   python radar2\scripts\radar_eval.py --n 10 --ocr_models medium --ocr_mode full   (radar team's original OCR)
+  python radar2\scripts\radar_eval.py --n 50 --seed 3 --ocr_models medium --ocr_mode labels   (label blocks, 23 Nov)
 Output: radar2/outputs/radar_eval/<tag>/per_question.csv and summary.json
 """
 import argparse
@@ -47,7 +48,7 @@ ap.add_argument("--splits", default=os.path.join(BASE, "data", "splits"),
 ap.add_argument("--n", type=int, default=10, help="questions per type")
 ap.add_argument("--seed", type=int, default=0)
 ap.add_argument("--ocr_models", default="mobile", choices=["mobile", "medium"])
-ap.add_argument("--ocr_mode", default="crops", choices=["crops", "full"])
+ap.add_argument("--ocr_mode", default="crops", choices=["crops", "full", "labels"])
 args = ap.parse_args()
 tag = f"{args.ocr_models}_{args.ocr_mode}_n{args.n}_seed{args.seed}"
 
