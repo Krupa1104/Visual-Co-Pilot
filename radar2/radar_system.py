@@ -1467,13 +1467,23 @@ class RadarSystem:
             if abs(left - x1) <= 1.2 * h:
                 cands.append((cy, left, r))
 
-        def line(k):
-            expected = anchor_cy + k * pitch
-            near = [(abs(cy - expected) + abs(left - x1), r) for cy, left, r in cands
-                    if abs(cy - expected) <= 0.45 * pitch]
-            return min(near, key=lambda t: t[0])[1] if near else None
+        def line(expected, tol):
+            near = [(abs(cy - expected) + abs(left - x1), cy, r) for cy, left, r in cands
+                    if abs(cy - expected) <= tol]
+            if not near:
+                return None, None
+            best = min(near, key=lambda t: t[0])
+            return best[2], best[1]
 
-        top, alt_row, hdg_row = line(0), line(1), line(2)
+        # Each line is placed from the line ABOVE it, using the measured spacing when available.
+        # (First version used k * pitch from the YOLO box height; a 2-3 px error in that box height
+        # moved the expected HDG line by ~2x that and the HDG line was missed: seed-2 eval 23 Nov,
+        # heading 11/20 with 7 "I can read callsign X" answers.)
+        top, top_cy = line(anchor_cy, 0.6 * h)
+        base = top_cy if top_cy is not None else anchor_cy
+        alt_row, alt_cy = line(base + pitch, 0.6 * pitch)
+        step = (alt_cy - base) if alt_cy is not None else pitch
+        hdg_row, _ = line(base + 2 * step, 0.6 * pitch)
         callsign = RadarSystem._parse_visible_label(str(top["text"]))["callsign"] if top else None
         altitude = heading = None
         if alt_row is not None:
